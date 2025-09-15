@@ -7,7 +7,22 @@ import os
 
 class ToolbarManager:
     """Classe para gerenciar a barra de ferramentas"""
-    
+ 
+ 
+def abrir_config_bancob():
+    """Abre o formulário de configuração do banco de dados"""
+    try:
+        config_form = DatabaseConfigForm()
+        config_form.root.transient(root)
+        config_form.root.update_idletasks()
+        width, height = 600, 500
+        x = (config_form.root.winfo_screenwidth() // 2) - (width // 2)
+        y = (config_form.root.winfo_screenheight() // 2) - (height // 2)
+        config_form.root.geometry(f'{width}x{height}+{x}+{y}')
+        config_form.run()
+    except Exception as e:
+        print(f"Erro ao abrir configuração do banco: {e}")
+           
     def __init__(self, parent):
         self.parent = parent
         self.buttons = {}
@@ -23,7 +38,7 @@ class ToolbarManager:
         # Configuração dos botões da toolbar
         self.toolbar_config = [            
             # Seção: Banco de Dados
-            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': 'abrir_config_banco', 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
+            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': abrir_config_bancob, 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
             {'type': 'separator'},
 
             # Seção: Arquivo

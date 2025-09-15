@@ -66,22 +66,153 @@ def main():
 
     # Menu Cadastros
     cadastros_menu = tk.Menu(menu_bar, tearoff=0)
-    cadastros_menu.add_command(label="Usuários GeoApolo")
+    cadatfmenu = tk.Menu(cadastros_menu, tearoff=0)    
+    cadatfmenu.add_command(label="Ativo Imobilizado")
+    cadatfmenu.add_command(label="Categoria de Bens")
+    cadatfmenu.add_command(label="Classificação de Ativos")
+    cadatfmenu.add_command(label="Estações de Trabalho")
+    cadatfmenu.add_command(label="Localização Física")
+    cadatfmenu.add_command(label="Status de Hardware/Software")
+    cadatfmenu.add_command(label="Tipos de Licenças de Software")
+    cadastros_menu.add_cascade(label="Ativo Fixo", menu=cadatfmenu)  
+    # 
+    cadcctrlmenu = tk.Menu(cadastros_menu,tearoff=0)
+    cadcctrlmenu.add_command(label="Centro de Custos/Controle")
+    cadastros_menu.add_cascade(label="Manutenção Centro de controle", menu=cadcctrlmenu)
+    # 
+    cadcrm = tk.Menu(cadastros_menu, tearoff=0)
+    cadcrm.add_command(label="Cadastros de &Eventos")
+    cadcrm.add_command(label="Cadastros de Tipos de Campanhas")
+    cadastros_menu.add_cascade(label="CRM",menu=cadcrm)
+    # 
+    cadentidades = tk.Menu(cadastros_menu, tearoff=0)
+    cadentidades.add_command(label="Categorias")
+    cadentidades.add_command(label="Entidades")
+    cadentidades.add_command(label="Importa Entidades")
+    cadentidades.add_command(label="Tipos de Tratamento")
+    cadastros_menu.add_cascade(label="Entidades", menu=cadentidades)
+    # 
+    cadfinanc = tk.Menu(cadastros_menu, tearoff=0)
+    cadfinanc.add_command(label="Plano de Classes de Receitas/Despesas")
+    cadfinanc.add_command(label="Manutenção de Cartões de Crédito")
+    cadfinanc.add_command(label="Situação Financeira de Documentos")
+    cadfinanc.add_command(label="tipos de Cobrança")
+    cadastros_menu.add_cascade(label="Financeiro", menu=cadfinanc)
+    # 
+    cadestoque = tk.Menu(cadastros_menu, tearoff=0)
+    cadestoque.add_command(label="Cores")
+    cadestoque.add_command(label="Marcas")
+    cadestoque.add_command(label="Produtos")
+    cadastros_menu.add_cascade(label="Estoque",menu=cadestoque)
+    # 
+    cadgeral = tk.Menu(cadastros_menu, tearoff=0)
+    cadgeral.add_command(label="Departamentos")
+    cadgeral.add_command(label="Empresas")
+    cadastros_menu.add_cascade(label="Geral", menu=cadgeral)
+    # 
+    cadastros_menu.add_command(label="Usuários GeoApolo")   
+    
     menu_bar.add_cascade(label="Cadastros", menu=cadastros_menu)
 
     # Menu GeoApolo
-    geoapolo_menu = tk.Menu(menu_bar, tearoff=0)
-    geoapolo_menu.add_command(label="Atualiza Inventário de TI")
+    geoapolo_menu = tk.Menu(menu_bar, tearoff=0)    
+    gamenuativofixo = tk.Menu(geoapolo_menu, tearoff=0)
+    gamenuativofixo.add_command(label="Atualiza Inventário de TI")
+    geoapolo_menu.add_cascade(label="Ativo Fixo", menu=gamenuativofixo)
+    # 
+    gamenufinanc = tk.Menu(menu_bar, tearoff=0)
+    # 
+    gamenufinancapagar = tk.Menu(gamenufinanc, tearoff=0)
+    gamenufinancapagar.add_command(label="Controle de Cartões de Crédito")
+    geoapolo_menu.add_cascade(label="Contas a Pagar", menu=gamenufinancapagar)
+    # 
+    gamenufinancareceber = tk.Menu(gamenufinanc, tearoff=0)
+    gamenufinancareceber.add_command(label="Documentos a Receber")
+    geoapolo_menu.add_cascade(label="Contas a Receber", menu=gamenufinancareceber)
+    # 
+    gamenuintegrasavic = tk.Menu(geoapolo_menu, tearoff=0)
+    gamenuintegrasavic.add_command(label="Importa Grupos de Oração(GO) Savic")
+    gamenuintegrasavic.add_command(label="Moderação de Grupos de Oração Savic x Alvo")
+    gamenuintegrasavic.add_command(label="Valida Entidades Alvo x Savic")
+    gamenuintegrasavic.add_command(label="Importa entidades Savic -> GeoAlvo")
+    geoapolo_menu.add_cascade(label="Integração Savic x Alvo", menu=gamenuintegrasavic)
     menu_bar.add_cascade(label="Geoapolo", menu=geoapolo_menu)
-
+    # 
     # Menu Alvo
     alvo_menu = tk.Menu(menu_bar, tearoff=0)
-    alvo_menu.add_command(label="Auditoria de Cupons Fiscais")
+    alvoloja = tk.Menu(alvo_menu, tearoff=0)
+    alvoloja.add_command(label="Auditoria de Cupons Fiscais")
+    alvoloja.add_command(label="Troca Cupom Fiscal nomeado por Consumidor Final")
+    alvo_menu.add_cascade(label="Alvo Loja", menu=alvoloja)
+    # 
+    alvocontabilidade = tk.Menu(alvo_menu, tearoff=0)
+    alvocontabilidade.add_command(label="Débito x Crédito")
+    alvocontabilidade.add_command(label="Débito x Crédito Detalhado")
+    alvocontabilidade.add_command(label="Exclui Lançamentos Contábeis")
+    alvocontabilidade.add_command(label="Corrige Lançamentos de Cupom Fiscal")
+    alvo_menu.add_cascade(label="Contabilidade",menu=alvocontabilidade)
+    # 
+    alvocrm = tk.Menu(alvo_menu, tearoff=0)
+    alvocrm.add_command(label="Administração de Campanhas")
+    alvocrm.add_command(label="Atualiza Valores de Campanhas")
+    alvocrm.add_command(label="E-Mail Marketing de Campanhas")
+    alvocrm.add_command(label="TeleMarketing de Campanhas")
+    alvocrm.add_command(label="Soluções de Ocorrências")
+    alvocrm.add_command(label="Mesclagem de Entidades")
+    alvocrmrcc= tk.Menu(alvocrm, tearoff=0)
+    alvocrmrcc.add_command(label="Importa Monitoramento Lembrete de Doações")
+    alvocrmrcc.add_command(label="Integração Congressos ONLINE x Alvo x RdStation")
+    alvocrmrcc.add_command(label="Vincula Entidade a Diocese")
+    alvocrm.add_cascade(label="RCC", menu=alvocrmrcc)
+    alvo_menu.add_cascade(label="CRM", menu=alvocrm)
+    # 
+    alvoentidade = tk.Menu(alvo_menu, tearoff=0)
+    alvoentidade.add_command(label="Relaciona Usuário com Categoria")
+    alvoentidade.add_command(label="Relaciona Usuários, Categorias e Entidades")
+    alvoentidade.add_command(label="Relaciona Entidade com Diocese")
+    alvo_menu.add_cascade(label="Entidades", menu=alvoentidade)
+    # 
+    alvofinanceiro = tk.Menu(alvo_menu, tearoff=0)
+    alvofinanceiro.add_command(label="Gera Títulos a Receber no Alvo")
+    alvofinanceiro.add_command(label="Gera Remessa para Bancos")
+    alvofinanceiro.add_command(label="Débito x Crédito de Conta Financeira")
+    alvofinanceiro.add_command(label="Atualiza Situação de Títulos")
+    alvofinanceiro.add_command(label="Conciliação Vindi Crédito Recorrente(RCC)")
+    alvo_menu.add_cascade(label="Financeiro", menu=alvofinanceiro)
+    # 
+    alvolocalidade = tk.Menu(alvo_menu, tearoff=0)
+    alvolocalidade.add_command(label="Correção de Distritos cadastrados como Cidades")
+    alvo_menu.add_cascade(label="Localidades", menu=alvolocalidade)
+    # 
+    alvoestoque = tk.Menu(alvo_menu, tearoff=0)
+    alvoestoque.add_command(label="Cores")
+    alvoestoque.add_command(label="Marcas")
+    alvoestoque.add_command(label="Produtos")
+    alvo_menu.add_cascade(label="Estoque", menu=alvoestoque)
+    # 
+    alvogeral = tk.Menu(alvo_menu, tearoff=0)
+    alvogeral.add_command(label="Departamentos")
+    alvogeral.add_command(label="Empresas")
+    alvo_menu.add_cascade(label="Geral", menu=alvogeral)
+    # 
+    alvousersalvo = tk.Menu(alvo_menu, tearoff=0)
+    alvousersalvo.add_command(label="Desativa Usuários do Alvo")
+    alvousersalvo.add_command(label="Clonar Permissão de Usuários")
+    alvousersalvo.add_command(label="Permissão em Contas Financeiras")
+    alvo_menu.add_cascade(label="Usuários do Alvo", menu=alvousersalvo)
+    # 
     menu_bar.add_cascade(label="Alvo", menu=alvo_menu)
-
+    # 
     # Menu Utilitários
     utilitarios_menu = tk.Menu(menu_bar, tearoff=0)
+    utilmenuimediatas = tk.Menu(menu_bar, tearoff=0)        
+    utilmenuimediatas.add_command(label="Cadastrar Consultas")
+    utilmenuimediatas.add_command(label="Executar Consultas")
+    # 
+    utilitarios_menu.add_cascade(label="Consultas Imediatas", menu=utilmenuimediatas)    
     utilitarios_menu.add_command(label="Validação de Licenças")
+    utilitarios_menu.add_command(label="Enviar E-Mail via GeoAlvo F8")
+    # 
     menu_bar.add_cascade(label="Utilitários", menu=utilitarios_menu)
 
     # Comando Sair no menu principal
@@ -91,7 +222,7 @@ def main():
     root.config(menu=menu_bar)
 
     # Criar a toolbar
-    toolbar_manager = ToolbarManager(root)
+    toolbar_manager = ToolbarManager()
     
     toolbar_manager.disable_button('Config. BD')  # Desabilitar botão salvar
     toolbar_manager.enable_button('Config. BD')   # Habilitar botão salvar

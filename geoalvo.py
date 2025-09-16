@@ -5,7 +5,8 @@ import time
 from config_banco import DatabaseConfigForm
 from toolbar_geoalvo import ToolbarManager
 
-def abrir_config_banco():
+root = tk.Tk()
+def abrir_config_banco(root):
     """Abre o formulário de configuração do banco de dados"""
     try:
         config_form = DatabaseConfigForm()
@@ -39,6 +40,7 @@ def main():
     largura_tela = root.winfo_screenwidth()
     altura_tela = root.winfo_screenheight() - 40
     root.geometry(f"{largura_tela}x{altura_tela}+0+0")
+    root.state('zoomed') # maximiza a janela
 
     # =============================================
     # Barra de menu (PRIMEIRO)
@@ -47,7 +49,7 @@ def main():
 
     # Menu Configurações
     config_menu = tk.Menu(menu_bar, tearoff=0)
-    config_menu.add_command(label="Banco de Dados", command=abrir_config_banco)
+    config_menu.add_command(label="Banco de Dados", command=lambda: abrir_config_banco(root))
     
     sistema_menu = tk.Menu(config_menu, tearoff=0)
     sistema_menu.add_command(label="Parâmetros GeoApolo/Alvo")
@@ -221,8 +223,8 @@ def main():
     # Configura o menu na janela
     root.config(menu=menu_bar)
 
-    # Criar a toolbar
-    toolbar_manager = ToolbarManager()
+    # Criar a toolbar    
+    toolbar_manager = ToolbarManager(root)
     
     toolbar_manager.disable_button('Config. BD')  # Desabilitar botão salvar
     toolbar_manager.enable_button('Config. BD')   # Habilitar botão salvar

@@ -1,33 +1,38 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from PIL import Image, ImageTk
-
-
+from config_banco import DatabaseConfigForm
 import os
+import sys
 
 class ToolbarManager:
     """Classe para gerenciar a barra de ferramentas"""
- 
- 
-def abrir_config_bancob():
-    """Abre o formulário de configuração do banco de dados"""
-    try:
-        config_form = DatabaseConfigForm()
-        config_form.root.transient(root)
-        config_form.root.update_idletasks()
-        width, height = 600, 500
-        x = (config_form.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (config_form.root.winfo_screenheight() // 2) - (height // 2)
-        config_form.root.geometry(f'{width}x{height}+{x}+{y}')
-        config_form.run()
-    except Exception as e:
-        print(f"Erro ao abrir configuração do banco: {e}")
-           
+    
     def __init__(self, parent):
         self.parent = parent
         self.buttons = {}
-        self.icons = {}
+        self.icons = []
         self.create_toolbar()
+    
+    def abrir_config_bancob(self):
+        """Abre o formulário de configuração do banco de dados"""
+        try:
+            config_form = DatabaseConfigForm()
+            # config_form.root.transient(root)
+            config_form.root.transient(self.parent)
+            config_form.root.update_idletasks()
+            width, height = 600, 500
+            x = (config_form.root.winfo_screenwidth() // 2) - (width // 2)
+            y = (config_form.root.winfo_screenheight() // 2) - (height // 2)
+            config_form.root.geometry(f'{width}x{height}+{x}+{y}')
+            config_form.run()
+            
+            # Por enquanto, usando um messagebox como placeholder
+            # messagebox.showinfo("Configuração", "Abrindo configuração do banco de dados...")
+            
+        except Exception as e:
+            print(f"Erro ao abrir configuração do banco: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir configuração do banco: {e}")
         
     def create_toolbar(self):
         """Cria a estrutura da toolbar"""
@@ -38,12 +43,11 @@ def abrir_config_bancob():
         # Configuração dos botões da toolbar
         self.toolbar_config = [            
             # Seção: Banco de Dados
-            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': abrir_config_bancob, 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
+            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': self.abrir_config_bancob, 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
             {'type': 'separator'},
 
             # Seção: Arquivo
-            # {'name': 'novo', 'icon': 'new.png', 'text': 'Config BD', 'command': self.novo_banco, 'tooltip': 'ajustar'},
-            {'name': 'troca_empresa', 'icon': 'company.png', 'text': 'Troca Emporesa', 'command': 'self.change_company', 'tooltip': 'Troca de empresa no sistema'},
+            {'name': 'troca_empresa', 'icon': 'company.png', 'text': 'Troca Empresa', 'command': self.change_company, 'tooltip': 'Troca de empresa no sistema'},
             {'name': 'salvar', 'icon': 'save.png', 'text': 'Salvar', 'command': self.salvar_arquivo, 'tooltip': 'Salvar arquivo (Ctrl+S)'},
             {'type': 'separator'},
             
@@ -140,7 +144,9 @@ def abrir_config_bancob():
                 # Usar PIL para redimensionar
                 image = Image.open(full_path)
                 image = image.resize(size, Image.Resampling.LANCZOS)
-                return ImageTk.PhotoImage(image)
+                # return ImageTk.PhotoImage(image)
+                return ImageTk.PhotoImage(image, master=self.parent)
+
             else:
                 # Para arquivos .gif nativos do tkinter
                 return tk.PhotoImage(file=full_path)
@@ -219,6 +225,9 @@ def abrir_config_bancob():
     def conectar_banco(self):
         messagebox.showinfo("Conectar", "Conectar ao banco")
     
+    def change_company(self):
+        messagebox.showinfo("Empresa", "Trocar empresa")
+    
     def gerar_relatorio(self):
         messagebox.showinfo("Relatório", "Gerar relatório")
     
@@ -235,32 +244,3 @@ def abrir_config_bancob():
         if messagebox.askokcancel("Sair", "Deseja realmente sair do sistema?"):
             self.parent.quit()
             self.parent.destroy()
-
-# # ==========================================
-# # EXEMPLO DE USO
-# # ==========================================
-
-# def main():
-#     root = tk.Tk()
-#     root.title("Sistema GeoAlvo - Toolbar Profissional")
-#     root.geometry("800x600")
-    
-#     # Criar a toolbar
-#     toolbar_manager = ToolbarManager(root)
-    
-#     # Exemplo de como controlar botões
-#     # toolbar_manager.disable_button('salvar')  # Desabilitar botão salvar
-#     # toolbar_manager.enable_button('salvar')   # Habilitar botão salvar
-    
-#     # Área principal
-#     main_frame = tk.Frame(root, bg='white')
-#     main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-    
-#     label = tk.Label(main_frame, text="Área principal do sistema", 
-#                     font=('Arial', 14), bg='white')
-#     label.pack(pady=50)
-    
-#     root.mainloop()
-
-# if __name__ == "__main__":
-#     main()

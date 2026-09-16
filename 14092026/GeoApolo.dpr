@@ -1,0 +1,120 @@
+program GeoApolo;
+
+
+
+uses
+  Vcl.Forms,
+  unt_PermissionManager in 'unt_PermissionManager.pas',
+  unt_UIHelper in 'unt_UIHelper.pas',
+  unt_dados in 'unt_dados.pas' {modulo_dados: TDataModule},
+  funcoes in 'funcoes.pas',
+  unt_confignetandsys in 'unt_confignetandsys.pas' {frmconfsys},
+  unt_cadentidades_types in 'unt_cadentidades_types.pas',
+  unt_cadentidades_repository in 'unt_cadentidades_repository.pas',
+  unt_cadentidades_service in 'unt_cadentidades_service.pas',
+  unt_cadentidades in 'unt_cadentidades.pas' {frmcadentidade},
+  unt_entidades_types in 'unt_entidades_types.pas',
+  unt_entidades_repository in 'unt_entidades_repository.pas',
+  unt_entidades_service in 'unt_entidades_service.pas',
+  unt_alvo_api_client in 'unt_alvo_api_client.pas',
+  unt_entidades in 'unt_entidades.pas' {frmentidades},
+  unt_ViaCEPUtils in 'unt_ViaCEPUtils.pas',
+  unt_viacependereco in 'unt_viacependereco.pas',
+  unt_statusbarclock in 'unt_statusbarclock.pas',
+  unt_relacionadioceseentidade in 'unt_relacionadioceseentidade.pas' {frmrelacionaentidadediocese},
+  unt_cadcores in 'unt_cadcores.pas' {frmcadcores},
+  unt_corrigecidadedistrito in 'unt_corrigecidadedistrito.pas' {frmdistritocidades},
+  unt_debxcred in 'unt_debxcred.pas' {frmdebxcred},
+  unt_debxcred_detalhe in 'unt_debxcred_detalhe.pas' {frmdebcred_detalhe},
+  unt_debxcredctafin in 'unt_debxcredctafin.pas' {frmdebxcredfin},
+  unt_users in 'unt_users.pas' {frmusuarios},
+  unt_estacoes in 'unt_estacoes.pas' {frmestacoes},
+  unt_configsysv2 in 'unt_configsysv2.pas' {frmconfig},
+  unt_DAOEstacoes in 'unt_DAOEstacoes.pas',
+  unt_Consultas4 in 'unt_Consultas4.pas' {FrmConsulta4},
+  unt_consultav3_types in 'unt_consultav3_types.pas',
+  unt_consultav3_repository in 'unt_consultav3_repository.pas',
+  unt_consultav3_service in 'unt_consultav3_service.pas',
+  unt_consultav3 in 'unt_consultav3.pas' {frmConsulta3},
+  unt_matchcode in 'unt_matchcode.pas' {frmmatchcode},
+  unt_logon in 'unt_logon.pas' {frmlogon},
+  unt_imediatas in 'unt_imediatas.pas' {frmimediatas},
+  frmconfigbancos in 'frmconfigbancos.pas' {frmconfigbanco},
+  unt_novidadesversao in 'unt_novidadesversao.pas' {frmNovidadesVersao},
+  unt_mannovasversoes in 'unt_mannovasversoes.pas' {frmcadnovasversoes},
+  unt_manconfigcod in 'unt_manconfigcod.pas' {frmManCodigosSistema},
+  unt_autenticador in 'unt_autenticador.pas',
+  unt_configuracao_acesso in 'unt_configuracao_acesso.pas',
+  unt_logon_controller in 'unt_logon_controller.pas',
+  unt_logon_interfaces in 'unt_logon_interfaces.pas',
+  unt_repositorio_licenca in 'unt_repositorio_licenca.pas',
+  unt_repositorio_usuario in 'unt_repositorio_usuario.pas',
+  unt_validador_licenca in 'unt_validador_licenca.pas',
+  unt_usersadm in 'unt_usersadm.pas' {frmusuariosadm},
+  unt_grupousuario in 'unt_grupousuario.pas' {frmgrupousuarios},
+  unt_configperfil in 'unt_configperfil.pas' {frmconfigperfil},
+  unt_cadeventos in 'unt_cadeventos.pas' {frmcadeventos},
+  unt_cadtipocampanha in 'unt_cadtipocampanha.pas' {frmtipocampanha},
+  unt_cadcategorias in 'unt_cadcategorias.pas' {frmcadcategoria},
+  unt_cadtipotratamento in 'unt_cadtipotratamento.pas' {frmcadtipotratamento},
+  unt_nomesamigaveis in 'unt_nomesamigaveis.pas' {frmNomesAmigaveis},
+  unt_about in 'unt_about.pas' {frmabout},
+  uIntegradorGeoApolo in 'uIntegradorGeoApolo.pas',
+  uEntidade in 'uEntidade.pas',
+  uEntidadeService in 'uEntidadeService.pas',
+  uGeoApoloEntidadeDTO in 'uGeoApoloEntidadeDTO.pas',
+  unt_AlvoEntidade in 'unt_AlvoEntidade.pas',
+  unt_conciliavindi in 'unt_conciliavindi.pas' {frmconciliavindi},
+  unt_intf_dashboardvindi in 'unt_intf_dashboardvindi.pas',
+  frmDashboardVindi in 'frmDashboardVindi.pas' {frmDashboardVindi},
+  unt_secao in 'unt_secao.pas' {frmdepartamentos},
+  unt_cadempresas in 'unt_cadempresas.pas' {frmcadempresas},
+  unt_empresa in 'unt_empresa.pas',
+  unt_auditoriacuponsfiscais in 'unt_auditoriacuponsfiscais.pas' {frmauditoriacupons},
+  unt_splash in 'unt_splash.pas' {frmSplash},
+  unt_cadconsulta in 'unt_cadconsulta.pas' {frmcadconsulta},
+  unt_matchcodecontato in 'unt_matchcodecontato.pas' {frmMatchContato},
+  unt_principal in 'unt_principal.pas' {frmprincipal},
+  unt_repo_dashboardvindi in 'unt_repo_dashboardvindi.pas',
+  unt_desligafunc in 'unt_desligafunc.pas' {frmdesligafunc},
+  unt_clonarpermissao in 'unt_clonarpermissao.pas' {frmclonarpermissao},
+  unt_usuario_ctasfin in 'unt_usuario_ctasfin.pas' {frmRelacContasFin_usuario},
+  unt_excluicontabil in 'unt_excluicontabil.pas' {frmexcluicontablanc},
+  unt_categoriaentidade in 'unt_categoriaentidade.pas' {frmrelacentidades},
+  unt_usuario_categoria_entidade in 'unt_usuario_categoria_entidade.pas' {frmusuario_categ_entidade},
+  unt_importainscritos_eventos in 'unt_importainscritos_eventos.pas' {frmimportacadastroeventos},
+  unt_estacoes_types in 'unt_estacoes_types.pas',
+  unt_estacoes_repository in 'unt_estacoes_repository.pas',
+  unt_estacoes_service in 'unt_estacoes_service.pas',
+  unt_document_validators in 'unt_document_validators.pas',
+  unt_viacep_service in 'unt_viacep_service.pas',
+  unt_email_service in 'unt_email_service.pas',
+  unt_configsys_types in 'unt_configsys_types.pas',
+  unt_configsys_repository in 'unt_configsys_repository.pas',
+  unt_configsys_service in 'unt_configsys_service.pas',
+  unt_categoriaentidade_types in 'unt_categoriaentidade_types.pas',
+  unt_categoriaentidade_repository in 'unt_categoriaentidade_repository.pas',
+  unt_categoriaentidade_service in 'unt_categoriaentidade_service.pas',
+  unt_manativoimobilizado_types in 'unt_manativoimobilizado_types.pas',
+  unt_manativoimobilizado_repository in 'unt_manativoimobilizado_repository.pas',
+  unt_manativoimobilizado_service in 'unt_manativoimobilizado_service.pas',
+  unt_clonarpermissao_types in 'unt_clonarpermissao_types.pas',
+  unt_clonarpermissao_repository in 'unt_clonarpermissao_repository.pas',
+  unt_clonarpermissao_service in 'unt_clonarpermissao_service.pas';
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  frmsplash:=tfrmsplash.create(application);
+  frmsplash.lblnumeroversao.caption := frmsplash.lblnumeroversao.caption+'   '+getbuildinfo;
+  setcursorsql('sql');
+  frmsplash.Show;
+  frmsplash.update;
+  delay(1);
+  frmsplash.Free;
+  setcursorsql('');
+  Application.CreateForm(Tfrmlogon, frmlogon);
+  Application.Run;
+end.

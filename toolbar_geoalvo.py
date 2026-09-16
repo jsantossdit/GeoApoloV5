@@ -33,6 +33,15 @@ class ToolbarManager:
         except Exception as e:
             print(f"Erro ao abrir configuração do banco: {e}")
             messagebox.showerror("Erro", f"Erro ao abrir configuração do banco: {e}")
+
+    def abrir_entidades(self):
+        """Abre a janela de gestão de entidades"""
+        try:
+            from entidades import EntidadesView
+            EntidadesView(self.parent)
+        except Exception as e:
+            print(f"Erro ao abrir módulo de entidades: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir módulo de entidades:\n{e}")
         
     def create_toolbar(self):
         """Cria a estrutura da toolbar"""
@@ -44,6 +53,7 @@ class ToolbarManager:
         self.toolbar_config = [            
             # Seção: Banco de Dados
             {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': self.abrir_config_bancob, 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
+            {'name': 'entidades', 'icon': 'entidades.png', 'text': 'Entidades', 'command': self.abrir_entidades, 'tooltip': 'Cadastro e Gestão de Entidades'},
             {'type': 'separator'},
 
             # Seção: Arquivo
@@ -229,10 +239,16 @@ class ToolbarManager:
         messagebox.showinfo("Empresa", "Trocar empresa")
     
     def gerar_relatorio(self):
-        messagebox.showinfo("Relatório", "Gerar relatório")
+        """Abre a Central de Relatórios"""
+        try:
+            from relatorios import RelatoriosView
+            RelatoriosView(self.parent)
+        except Exception as e:
+            print(f"Erro ao abrir relatórios: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir relatórios:\n{e}")
     
     def imprimir(self):
-        messagebox.showinfo("Imprimir", "Imprimir documento")
+        self.gerar_relatorio()
     
     def gerenciar_usuarios(self):
         messagebox.showinfo("Usuários", "Gerenciar usuários")

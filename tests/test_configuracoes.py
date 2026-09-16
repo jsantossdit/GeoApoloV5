@@ -1,0 +1,137 @@
+"""
+Testes automatizados para o módulo de Configurações Gerais e Parâmetros do Sistema.
+Execução headless e desacoplada.
+"""
+
+import os
+import sys
+import shutil
+import tempfile
+import unittest
+import tkinter as tk
+from unittest.mock import MagicMock
+
+PASTA_RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PASTA_RAIZ not in sys.path:
+    sys.path.insert(0, PASTA_RAIZ)
+
+from configuracoes.models import ConfiguracaoSistemaDTO, ServidorEmailDTO, ResultadoOperacao
+from configuracoes.service import ConfiguracoesService
+from configuracoes.repository import ConfiguracoesRepository
+from configuracoes.view import ConfiguracoesView
+
+
+class TestConfiguracoesService(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_repo = MagicMock()
+        self.service = ConfiguracoesService(self.mock_repo)
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_normalizar_caminho(self):
+        # Substitui $ por barra
+        cam = self.service.normalizar_caminho(r"C:$temp$backup$")
+        self.assertEqual(cam, os.path.normpath(r"C:\temp\backup"))
+
+        # Substitui # por traço
+        cam2 = self.service.normalizar_caminho(r"C:\pasta#teste")
+        self.assertEqual(cam2, os.path.normpath(r"C:\pasta-teste"))
+
+        # Caminho vazio
+        self.assertEqual(self.service.normalizar_caminho(""), "")
+
+    def test_validar_diretorio(self):
+        # Diretório temporário existente
+        self.assertTrue(self.service.validar_diretorio(self.temp_dir))
+
+        # Subdiretório inexistente
+        sub = os.path.join(self.temp_dir, "nova_pasta")
+        self.assertFalse(self.service.validar_diretorio(sub, criar_se_nao_existir=False))
+
+        # Criar se não existir
+        self.assertTrue(self.service.validar_diretorio(sub, criar_se_nao_existir=True))
+        self.assertTrue(os.path.exists(sub))
+
+    def test_salvar_parametros_validacao(self):
+        # Sem empresa
+        res = self.service.salvar_parametros({}, empresa_codigo="")
+        self.assertFalse(res.sucesso)
+        self.assertIn("empresa", res.mensagem.lower())
+
+        # Com empresa
+        self.mock_repo.salvar_configuracoes.return_value = True
+        res_ok = self.service.salvar_parametros({"caminhobackupsistema": "C:$backup"}, empresa_codigo="001")
+        self.assertTrue(res_ok.sucesso)
+        self.mock_repo.salvar_configuracoes.assert_called_once()
+
+
+class TestConfiguracoesRepository(unittest.TestCase):
+
+    def test_queries_with_nolock(self):
+        mock_cursor = MagicMock()
+        mock_cursor.description = [("caminhobackupsistema",), ("instalacaolocal",)]
+        mock_cursor.fetchone.return_value = ("C:\\backup", "C:\\local")
+
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+
+        repo = ConfiguracoesRepository(connection=mock_conn)
+
+        # 1. obter_configuracoes
+        config = repo.obter_configuracoes("001")
+        self.assertEqual(config["caminhobackupsistema"], "C:\\backup")
+        sql = mock_cursor.execute.call_args[0][0]
+        self.assertIn("WITH (NOLOCK)", sql)
+        self.assertIn("USER_geoapolo_configuracoes", sql)
+
+        # 2. listar_servidores_email
+        mock_cursor.fetchall.return_value = [("001", "SMTP", "smtp.office365.com", 587, "", 993)]
+        mock_cursor.description = [
+            ("codigo_servidor",),
+            ("protocolo",),
+            ("servidor_envio",),
+            ("porta_envio",),
+            ("servidor_recebimento",),
+            ("porta_recebimento",),
+        ]
+        servidores = repo.listar_servidores_email()
+        self.assertEqual(len(servidores), 1)
+        sql_email = mock_cursor.execute.call_args[0][0]
+        self.assertIn("WITH (NOLOCK)", sql_email)
+        self.assertIn("USER_geoapolo_mail_server", sql_email)
+
+
+class TestConfiguracoesViewHeadless(unittest.TestCase):
+
+    def setUp(self):
+        self.root = tk.Tk()
+        self.root.withdraw()
+
+        self.mock_cursor = MagicMock()
+        self.mock_cursor.description = [("caminhobackupsistema",), ("instalacaolocal",)]
+        self.mock_cursor.fetchone.return_value = ("C:\\backup", "C:\\local")
+
+        self.mock_conn = MagicMock()
+        self.mock_conn.cursor.return_value = self.mock_cursor
+
+    def tearDown(self):
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
+    def test_view_instantiation(self):
+        view = ConfiguracoesView(parent=self.root, connection=self.mock_conn, empresa_codigo="001")
+        self.assertIsNotNone(view.notebook)
+        self.assertIsNotNone(view.edt_backup)
+        self.assertIsNotNone(view.edt_instalacao)
+        self.assertIsNotNone(view.combo_integra)
+        view.destroy()
+
+
+if __name__ == "__main__":
+    unittest.main()

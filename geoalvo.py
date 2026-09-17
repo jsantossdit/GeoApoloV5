@@ -1,9 +1,12 @@
+import os
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import time
 from config_banco import DatabaseConfigForm
 from toolbar_geoalvo import ToolbarManager
+from core import obter_caminho_recurso
+
 
 root = None
 def abrir_config_banco(root):
@@ -581,7 +584,7 @@ def main():
     canvas.pack(fill=tk.BOTH, expand=True)
 
     # Carrega imagem de fundo
-    caminho_imagem = r"E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\Imagens\fundo_gradiente.jpeg"
+    caminho_imagem = obter_caminho_recurso(os.path.join("Imagens", "fundo_gradiente.jpeg"))
     try:
         imagem = Image.open(caminho_imagem)
         imagem = imagem.resize((largura_tela, altura_tela), Image.Resampling.LANCZOS)

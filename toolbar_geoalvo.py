@@ -4,6 +4,8 @@ from PIL import Image, ImageTk
 from config_banco import DatabaseConfigForm
 import os
 import sys
+from core import obter_caminho_recurso
+
 
 class ToolbarManager:
     """Classe para gerenciar a barra de ferramentas"""
@@ -146,7 +148,7 @@ class ToolbarManager:
     
     def load_icon(self, filename, size=(24, 24)):
         """Carrega um ícone com tratamento de erro"""
-        base_path = r"E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\Imagens"
+        base_path = obter_caminho_recurso("Imagens")
         full_path = os.path.join(base_path, filename)
         
         try:

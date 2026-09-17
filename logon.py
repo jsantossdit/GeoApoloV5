@@ -3,6 +3,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import sys
 import os
+from core import obter_caminho_recurso
 
 class TelaLogon:
     def __init__(self):
@@ -10,7 +11,8 @@ class TelaLogon:
         self.root.title("Login - GeoAlvo V5.0.0.1")
         self.root.resizable(False, False)
 
-        self.caminho_logo = r"E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\Imagens\Assinatura_SDIT.jpg"
+        self.caminho_logo = obter_caminho_recurso(os.path.join("Imagens", "Assinatura_SDIT.jpg"))
+
         
         # Criar interface
         self.criar_interface()
@@ -227,27 +229,13 @@ class TelaLogon:
         return usuarios_validos.get(usuario.lower()) == senha
     
     def abrir_sistema_principal(self):
-        """Abre o sistema principal"""
+        """Abre o sistema principal in-process com suporte total a empacotamento PyInstaller"""
         try:
-            # Tentar abrir o geoalvo.py
-            caminho_geoalvo = os.path.join(os.path.dirname(__file__), 'geoalvo.py')
-            
-            if os.path.exists(caminho_geoalvo):
-                import subprocess
-                subprocess.run([sys.executable, caminho_geoalvo])
-            else:
-                # Se não encontrar geoalvo.py, tentar main.py
-                caminho_main = os.path.join(os.path.dirname(__file__), 'main.py')
-                
-                if os.path.exists(caminho_main):
-                    import subprocess
-                    subprocess.run([sys.executable, caminho_main])
-                else:
-                    # Se não encontrar nenhum, mostrar mensagem
-                    messagebox.showinfo("Sistema", "Sistema principal carregado com sucesso!\n(Criar arquivo geoalvo.py)")
-                
+            import geoalvo
+            geoalvo.main()
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao abrir sistema principal: {e}")
+
     
     def sair_aplicacao(self):
         """Sai da aplicação"""

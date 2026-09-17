@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import os
 import sys
 import subprocess
+from core import obter_caminho_recurso
 
 class SplashScreen:
     def __init__(self):
@@ -15,7 +16,8 @@ class SplashScreen:
         self.versao = "5.0.0.1"
         
         # Caminho da imagem
-        self.caminho_imagem = r"E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\Imagens\Assinatura_SDIT.jpg"
+        self.caminho_imagem = obter_caminho_recurso(os.path.join("Imagens", "Assinatura_SDIT.jpg"))
+
         
         # Configurar e exibir splash
         self.criar_splash()
@@ -144,21 +146,15 @@ class SplashScreen:
         self.abrir_logon()
     
     def abrir_logon(self):
-        """Abre o arquivo logon.py"""
+        """Abre a tela de logon in-process compatível com empacotamento standalone"""
         try:
-            caminho_logon = r"E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\logon.py"
-            
-            if os.path.exists(caminho_logon):
-                # Executar logon.py
-                subprocess.run([sys.executable, caminho_logon])
-            else:
-                print(f"Arquivo logon.py não encontrado em: {caminho_logon}")
-                # Criar um logon simples para teste
-                self.criar_logon_teste()
-                
+            import logon
+            app = logon.TelaLogon()
+            app.root.mainloop()
         except Exception as e:
             print(f"Erro ao abrir logon: {e}")
             self.criar_logon_teste()
+
     
     def criar_logon_teste(self):
         """Cria uma tela de logon simples para teste"""

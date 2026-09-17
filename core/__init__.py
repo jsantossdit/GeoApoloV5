@@ -15,6 +15,7 @@ from core.validators import (
 )
 from core.viacep import consultar_cep
 from core.email_service import EmailService
+from core.recursos import obter_caminho_recurso
 
 __all__ = [
     "validar_cpf",
@@ -27,4 +28,5 @@ __all__ = [
     "formatar_cep",
     "consultar_cep",
     "EmailService",
+    "obter_caminho_recurso",
 ]

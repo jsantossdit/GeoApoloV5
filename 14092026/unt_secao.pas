@@ -133,7 +133,7 @@ function retorna_estruturamix(esidestrutura : string) : string; export;
 
 implementation
 
-uses unt_dados, funcoes, unt_principal, unt_consultav3, unt_logon,
+uses unt_departamentos_types, unt_departamentos_repository, unt_departamentos_service, unt_dados, funcoes, unt_principal, unt_consultav3, unt_logon,
      FireDAC.Comp.Client, FireDAC.Comp.DataSet, FireDAC.Stan.Param;
 
 {$R *.dfm}

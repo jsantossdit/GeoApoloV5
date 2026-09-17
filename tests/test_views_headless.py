@@ -307,7 +307,110 @@ class TestViewsHeadless(unittest.TestCase):
         self.assertIsNotNone(dialog)
         dialog._confirmar()
 
+    def test_configcod_view_headless(self):
+        """Verifica a inicialização da tela de Manutenção de Códigos do Sistema."""
+        from configcod import ManutencaoCodigosView, ConfigCodService, ConfigCodRepository, ConfigCodDTO
+
+        mock_repo = MagicMock(spec=ConfigCodRepository)
+        mock_repo.listar_tabelas.return_value = [
+            ConfigCodDTO("USER_geoapolo_entidades", 10, "S", "01", "MATRIZ")
+        ]
+        mock_repo.obter_config_cod.return_value = ConfigCodDTO("USER_geoapolo_entidades", 10, "S", "01", "MATRIZ")
+        service = ConfigCodService(mock_repo)
+
+        view = ManutencaoCodigosView(self.root, service=service)
+        self.assertIsNotNone(view.tree)
+        self.assertIsNotNone(view.ent_tabela)
+        self.assertIsNotNone(view.ent_proximo)
+        self.assertIsNotNone(view.chk_ativa)
+
+        # Testa seleção e limpeza
+        view._limpar_campos()
+        self.assertEqual(view.ent_tabela.get(), "")
+        view.destroy()
+
+    def test_nomesamigaveis_view_headless(self):
+        """Verifica a inicialização da tela de Dicionário de Nomes Amigáveis."""
+        from nomesamigaveis import NomesAmigaveisView, NomesAmigaveisService, NomesAmigaveisRepository, ObjetoSistemaDTO
+
+        mock_repo = MagicMock(spec=NomesAmigaveisRepository)
+        mock_repo.listar_categorias.return_value = ["Geral", "Fiscal"]
+        mock_repo.listar_objetos.return_value = [
+            ObjetoSistemaDTO("frmprincipal.btnEmitirNFe", "Emitir NF-e", "Fiscal")
+        ]
+        service = NomesAmigaveisService(mock_repo)
+
+        view = NomesAmigaveisView(self.root, service=service)
+        self.assertIsNotNone(view.tree)
+        self.assertIsNotNone(view.cbo_filtro_cat)
+        self.assertIsNotNone(view.ent_busca)
+        self.assertIsNotNone(view.ent_objeto)
+        self.assertIsNotNone(view.ent_amigavel)
+
+        # Testa sugestão para objeto atual
+        view.ent_objeto.insert(0, "btnSalvarCupom")
+        view._sugerir_nome_atual()
+        self.assertEqual(view.ent_amigavel.get(), "Salvar Cupom")
+
+        view.destroy()
+
+    def test_departamentos_view_headless(self):
+        """Verifica a inicialização da tela de Departamentos e Seções."""
+        from departamentos import DepartamentosView, DepartamentosService, DepartamentosRepository, DepartamentoDTO
+
+        mock_repo = MagicMock(spec=DepartamentosRepository)
+        mock_repo.listar_departamentos.return_value = [
+            DepartamentoDTO(1, "FINANCEIRO", "01", "MATRIZ", "A", "1.01", "ADM")
+        ]
+        mock_repo.obter_departamento.return_value = DepartamentoDTO(1, "FINANCEIRO", "01", "MATRIZ", "A")
+        mock_repo.obter_proximo_codigo.return_value = 2
+        service = DepartamentosService(mock_repo)
+
+        view = DepartamentosView(self.root, service=service)
+        self.assertIsNotNone(view.tree)
+        self.assertIsNotNone(view.ent_cod)
+        self.assertIsNotNone(view.ent_nome)
+        self.assertIsNotNone(view.ent_empresa)
+
+        # Testa novo registro
+        view._novo_registro()
+        self.assertEqual(view.ent_cod.get(), "002")
+        view.destroy()
+
+    def test_autenticacao_e_sobre_views_headless(self):
+        """Verifica a inicialização da tela de Login e do diálogo Sobre o Sistema."""
+        from autenticacao import LoginView, SobreSistemaDialog, AutenticacaoService, AutenticacaoRepository
+
+        mock_repo = MagicMock(spec=AutenticacaoRepository)
+        mock_repo.listar_empresas_ativas.return_value = [{"empcod": "01", "empnome": "MATRIZ SEDE"}]
+        mock_repo.obter_usuario_login.return_value = {
+            "usucod": "ADMIN",
+            "login": "admin",
+            "nome_completo": "Administrador",
+            "flagativo": "A",
+            "senha": "123",
+        }
+        mock_repo.obter_empresa.return_value = {"empcod": "01", "empnome": "MATRIZ SEDE"}
+
+        service = AutenticacaoService(mock_repo)
+
+        # 1. LoginView
+        login_view = LoginView(self.root, service=service)
+        self.assertIsNotNone(login_view.ent_login)
+        self.assertIsNotNone(login_view.ent_senha)
+        self.assertIsNotNone(login_view.cbo_empresa)
+        login_view.destroy()
+
+        # 2. SobreSistemaDialog
+        sobre = SobreSistemaDialog(self.root, service=service)
+        self.assertIsNotNone(sobre)
+        sobre.destroy()
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
+
+
 

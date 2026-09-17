@@ -41,7 +41,7 @@ var
 implementation
 
 uses
-  unt_dados, funcoes;
+  unt_nomesamigaveis_types, unt_nomesamigaveis_repository, unt_nomesamigaveis_service, unt_dados, funcoes;
 
 {$R *.dfm}
 

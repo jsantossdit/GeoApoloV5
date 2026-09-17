@@ -62,7 +62,7 @@ implementation
 
 {$R *.dfm}
 
-uses funcoes, unt_dados, unt_principal, unt_logon;
+uses unt_configcod_types, unt_configcod_repository, unt_configcod_service, funcoes, unt_dados, unt_principal, unt_logon;
 
 procedure TfrmManCodigosSistema.chktabelaativaClick(Sender: TObject);
 begin

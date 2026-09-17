@@ -272,7 +272,46 @@ def abrir_validacao_licenca_sistema(parent):
         print(f"Erro ao abrir validação de licenças: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir validação de licenças:\n{e}")
 
+def abrir_manutencao_codigos_sistema_menu(parent):
+    """Abre a tela de Manutenção de Códigos e Sequenciais do Sistema"""
+    try:
+        from configcod import abrir_manutencao_codigos_sistema
+        abrir_manutencao_codigos_sistema(parent)
+    except Exception as e:
+        print(f"Erro ao abrir manutenção de códigos: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir manutenção de códigos:\n{e}")
+
+def abrir_nomes_amigaveis_sistema(parent):
+    """Abre a tela do Dicionário de Nomes Amigáveis de Telas e Controles"""
+    try:
+        from nomesamigaveis import abrir_janela_nomes_amigaveis
+        abrir_janela_nomes_amigaveis(parent)
+    except Exception as e:
+        print(f"Erro ao abrir dicionário de nomes amigáveis: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir dicionário de nomes amigáveis:\n{e}")
+
+def abrir_departamentos_sistema(parent):
+    """Abre a tela de Gestão de Departamentos e Seções"""
+    try:
+        from departamentos import abrir_janela_departamentos
+        abrir_janela_departamentos(parent)
+    except Exception as e:
+        print(f"Erro ao abrir departamentos: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir departamentos:\n{e}")
+
+def abrir_sobre_sistema_menu(parent):
+    """Abre a janela com informações técnicas e Sobre o GeoAlvo"""
+    try:
+        from autenticacao import abrir_sobre_sistema
+        abrir_sobre_sistema(parent)
+    except Exception as e:
+        print(f"Erro ao abrir Sobre o Sistema: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir Sobre o Sistema:\n{e}")
+
 def sair_aplicacao():
+
+
+
 
 
     """Função para sair da aplicação"""
@@ -309,7 +348,7 @@ def main():
     sistema_menu = tk.Menu(config_menu, tearoff=0)
     sistema_menu.add_command(label="Parâmetros GeoApolo/Alvo", command=lambda: abrir_configuracoes_sistema(root))
     sistema_menu.add_command(label="Manutenção de Versões do GeoApolo", command=lambda: abrir_manutencao_versoes_sistema(root))
-    sistema_menu.add_command(label="Manutenção de Códigos do Sistema")
+    sistema_menu.add_command(label="Manutenção de Códigos do Sistema", command=lambda: abrir_manutencao_codigos_sistema_menu(root))
     config_menu.add_cascade(label="Parâmetros do Sistema", menu=sistema_menu)
     
     permissoes_menu = tk.Menu(config_menu, tearoff=0)
@@ -320,6 +359,7 @@ def main():
     permissoes_menu.add_command(label="Permissão em Contas Financeiras", command=lambda: abrir_contas_financeiras_usuario(root))
     permissoes_menu.add_command(label="Desativação / Desligamento de Usuários", command=lambda: abrir_desligamento_usuarios(root))
     permissoes_menu.add_command(label="Mesclagem / MatchCode de Usuários", command=lambda: abrir_matchcode_sistema(root, 0))
+    permissoes_menu.add_command(label="Dicionário de Nomes Amigáveis", command=lambda: abrir_nomes_amigaveis_sistema(root))
     config_menu.add_cascade(label="Permissões de Acesso", menu=permissoes_menu)
     
     config_menu.add_command(label="Trocar de Empresa <F2>", command=lambda: abrir_empresas_sistema(root, 0))
@@ -371,7 +411,7 @@ def main():
     cadastros_menu.add_cascade(label="Estoque",menu=cadestoque)
     # 
     cadgeral = tk.Menu(cadastros_menu, tearoff=0)
-    cadgeral.add_command(label="Departamentos")
+    cadgeral.add_command(label="Departamentos", command=lambda: abrir_departamentos_sistema(root))
     cadgeral.add_command(label="Empresas", command=lambda: abrir_empresas_sistema(root, 1))
     cadastros_menu.add_cascade(label="Geral", menu=cadgeral)
     # 
@@ -457,7 +497,7 @@ def main():
     alvo_menu.add_cascade(label="Estoque", menu=alvoestoque)
     # 
     alvogeral = tk.Menu(alvo_menu, tearoff=0)
-    alvogeral.add_command(label="Departamentos")
+    alvogeral.add_command(label="Departamentos", command=lambda: abrir_departamentos_sistema(root))
     alvogeral.add_command(label="Empresas", command=lambda: abrir_empresas_sistema(root, 1))
     alvo_menu.add_cascade(label="Geral", menu=alvogeral)
     # 
@@ -488,8 +528,14 @@ def main():
     relatorios_menu.add_command(label="Auditoria e Ocorrências", command=lambda: abrir_relatorios(root))
     menu_bar.add_cascade(label="Relatórios", menu=relatorios_menu)
 
+    # Menu Ajuda
+    ajuda_menu = tk.Menu(menu_bar, tearoff=0)
+    ajuda_menu.add_command(label="Sobre o GeoAlvo", command=lambda: abrir_sobre_sistema_menu(root))
+    menu_bar.add_cascade(label="Ajuda", menu=ajuda_menu)
+
     # Comando Sair no menu principal
     menu_bar.add_command(label="Sair", command=sair_aplicacao)
+
     
     # Configura o menu na janela
     root.config(menu=menu_bar)

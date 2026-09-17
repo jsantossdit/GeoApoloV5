@@ -47,11 +47,11 @@ def abrir_estacoes(parent):
         print(f"Erro ao abrir estações: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir módulo de estações:\n{e}")
 
-def abrir_configuracoes_sistema(parent):
+def abrir_configuracoes_sistema(parent, tab_index=0):
     """Abre a tela de Parâmetros e Configurações Gerais do Sistema"""
     try:
         from configuracoes import ConfiguracoesView
-        ConfiguracoesView(parent)
+        ConfiguracoesView(parent, tab_index=tab_index)
     except Exception as e:
         print(f"Erro ao abrir configurações do sistema: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir configurações do sistema:\n{e}")
@@ -64,6 +64,16 @@ def abrir_categorias(parent):
     except Exception as e:
         print(f"Erro ao abrir categorias: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir categorias:\n{e}")
+
+def abrir_cores(parent):
+    """Abre a tela de Cadastro de Cores de Produtos e Estoque Auxiliar"""
+    try:
+        from cores import abrir_janela_cores
+        abrir_janela_cores(parent)
+    except Exception as e:
+        print(f"Erro ao abrir cadastro de cores: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir cadastro de cores:\n{e}")
+
 
 def abrir_ativo_imobilizado(parent):
     """Abre a tela de Gestão de Ativo Imobilizado & Depreciação"""
@@ -244,7 +254,26 @@ def abrir_crm_sistema(parent, tab_index=0):
         print(f"Erro ao abrir CRM: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir CRM:\n{e}")
 
+def abrir_manutencao_versoes_sistema(parent):
+    """Abre a tela de Manutenção de Versões e Release Notes do GeoApolo"""
+    try:
+        from licenciamento import abrir_manutencao_versoes
+        abrir_manutencao_versoes(parent)
+    except Exception as e:
+        print(f"Erro ao abrir manutenção de versões: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir manutenção de versões:\n{e}")
+
+def abrir_validacao_licenca_sistema(parent):
+    """Abre a tela de Validação e Ativação de Licenças do Sistema"""
+    try:
+        from licenciamento import abrir_validacao_licenca
+        abrir_validacao_licenca(parent)
+    except Exception as e:
+        print(f"Erro ao abrir validação de licenças: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir validação de licenças:\n{e}")
+
 def sair_aplicacao():
+
 
     """Função para sair da aplicação"""
     if messagebox.askokcancel("Sair", "Deseja realmente sair do sistema?"):
@@ -274,11 +303,12 @@ def main():
 
     # Menu Configurações
     config_menu = tk.Menu(menu_bar, tearoff=0)
-    config_menu.add_command(label="Banco de Dados", command=lambda: abrir_config_banco(root))
+    config_menu.add_command(label="Banco de Dados & Servidores", command=lambda: abrir_configuracoes_sistema(root, 3))
+
     
     sistema_menu = tk.Menu(config_menu, tearoff=0)
     sistema_menu.add_command(label="Parâmetros GeoApolo/Alvo", command=lambda: abrir_configuracoes_sistema(root))
-    sistema_menu.add_command(label="Manutenção de Versões do GeoApolo")
+    sistema_menu.add_command(label="Manutenção de Versões do GeoApolo", command=lambda: abrir_manutencao_versoes_sistema(root))
     sistema_menu.add_command(label="Manutenção de Códigos do Sistema")
     config_menu.add_cascade(label="Parâmetros do Sistema", menu=sistema_menu)
     
@@ -335,7 +365,7 @@ def main():
     cadastros_menu.add_cascade(label="Financeiro", menu=cadfinanc)
     # 
     cadestoque = tk.Menu(cadastros_menu, tearoff=0)
-    cadestoque.add_command(label="Cores")
+    cadestoque.add_command(label="Cores", command=lambda: abrir_cores(root))
     cadestoque.add_command(label="Marcas")
     cadestoque.add_command(label="Produtos")
     cadastros_menu.add_cascade(label="Estoque",menu=cadestoque)
@@ -403,8 +433,8 @@ def main():
     alvo_menu.add_cascade(label="CRM", menu=alvocrm)
     # 
     alvoentidade = tk.Menu(alvo_menu, tearoff=0)
-    alvoentidade.add_command(label="Relaciona Usuário com Categoria")
-    alvoentidade.add_command(label="Relaciona Usuários, Categorias e Entidades")
+    alvoentidade.add_command(label="Relaciona Usuário com Categoria", command=lambda: abrir_categorias(root))
+    alvoentidade.add_command(label="Relaciona Usuários, Categorias e Entidades", command=lambda: abrir_categorias(root))
     alvoentidade.add_command(label="Relaciona Entidade com Diocese", command=lambda: abrir_relaciona_diocese_entidade(root))
     alvo_menu.add_cascade(label="Entidades", menu=alvoentidade)
     # 
@@ -421,7 +451,7 @@ def main():
     alvo_menu.add_cascade(label="Localidades", menu=alvolocalidade)
     # 
     alvoestoque = tk.Menu(alvo_menu, tearoff=0)
-    alvoestoque.add_command(label="Cores")
+    alvoestoque.add_command(label="Cores", command=lambda: abrir_cores(root))
     alvoestoque.add_command(label="Marcas")
     alvoestoque.add_command(label="Produtos")
     alvo_menu.add_cascade(label="Estoque", menu=alvoestoque)
@@ -446,7 +476,7 @@ def main():
     utilmenuimediatas.add_command(label="Executar Consultas", command=lambda: abrir_consultas_sistema(root, 0))
     # 
     utilitarios_menu.add_cascade(label="Consultas Imediatas", menu=utilmenuimediatas)    
-    utilitarios_menu.add_command(label="Validação de Licenças")
+    utilitarios_menu.add_command(label="Validação de Licenças", command=lambda: abrir_validacao_licenca_sistema(root))
     utilitarios_menu.add_command(label="Enviar E-Mail via GeoAlvo F8")
     # 
     # Menu Relatórios

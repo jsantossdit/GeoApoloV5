@@ -4,7 +4,8 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ExtCtrls, Buttons, Registry, ComCtrls, Grids, Vcl.Mask;
+  Dialogs, StdCtrls, ExtCtrls, Buttons, Registry, ComCtrls, Grids, Vcl.Mask,
+  unt_configbanco_types, unt_configbanco_repository, unt_configbanco_service;
 
 type
   Tfrmconfigbanco = class(TForm)

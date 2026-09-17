@@ -7,7 +7,8 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Buttons, Vcl.ComCtrls, Vcl.Grids,
-  FireDAC.Comp.Client, FireDAC.Stan.Param, Vcl.Mask;
+  FireDAC.Comp.Client, FireDAC.Stan.Param, Vcl.Mask,
+  unt_cadcores_types, unt_cadcores_repository, unt_cadcores_service;
 type
   TModoEdicao = (moInclusao, moAlteracao);
 

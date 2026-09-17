@@ -34,7 +34,7 @@ implementation
 
 {$R *.dfm}
 
-uses unt_principal, unt_dados, funcoes, unt_logon;
+uses unt_versoes_types, unt_versoes_repository, unt_versoes_service, unt_principal, unt_dados, funcoes, unt_logon;
 
 procedure TfrmNovidadesVersao.FormActivate(Sender: TObject);
 begin

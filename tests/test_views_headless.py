@@ -233,6 +233,81 @@ class TestViewsHeadless(unittest.TestCase):
         self.assertIsNotNone(view.tree_trat)
         view.destroy()
 
+    def test_cores_view_headless(self):
+        """Verifica a inicialização da tela de Cores de Produtos."""
+        from cores import CoresView, CoresService, CoresRepository, CorDTO
+
+        mock_repo = MagicMock(spec=CoresRepository)
+        mock_repo.listar_cores.return_value = [CorDTO(1, "BRANCO"), CorDTO(2, "PRETO")]
+        mock_repo.obter_proximo_codigo.return_value = 3
+        service = CoresService(mock_repo)
+
+        view = CoresView(self.root, service=service)
+        self.assertIsNotNone(view.tree)
+        self.assertIsNotNone(view.ent_cod)
+        self.assertIsNotNone(view.ent_desc)
+
+        # Testa seleção e novo registro
+        view._novo_registro()
+        self.assertEqual(view.ent_cod.get(), "003")
+        view.destroy()
+
+    def test_licenciamento_e_versoes_views_headless(self):
+        """Verifica a inicialização das telas de Licenciamento, Versões e Novidades."""
+        from datetime import date
+        from licenciamento import (
+            ValidacaoLicencaView,
+            ManutencaoVersoesView,
+            NovidadesVersaoDialog,
+            LicenciamentoService,
+            LicenciamentoRepository,
+            LicencaDTO,
+            VersaoSistemaDTO,
+        )
+
+        mock_repo = MagicMock(spec=LicenciamentoRepository)
+        mock_repo.buscar_licenca_mes.return_value = LicencaDTO(
+            id_palavra="TEST_PALAVRA",
+            data_inicial=date(2026, 9, 1),
+            data_final=date(2026, 9, 30),
+            flag_bloqueia="N",
+            flag_ativar="S",
+            tempo_bloqueio_dias=10,
+        )
+        mock_repo.listar_versoes.return_value = [
+            VersaoSistemaDTO("5.0.0", "17/09/2026", "Changelog", "S")
+        ]
+        mock_repo.obter_versao.return_value = VersaoSistemaDTO("5.0.0", "17/09/2026", "Changelog", "S")
+        mock_repo.usuario_ja_viu_versao.return_value = False
+
+        service = LicenciamentoService(mock_repo)
+
+        # 1. ValidacaoLicencaView
+        view_lic = ValidacaoLicencaView(self.root, service=service)
+        self.assertIsNotNone(view_lic.ent_chave)
+        self.assertIsNotNone(view_lic.lbl_status)
+        view_lic.destroy()
+
+        # 2. ManutencaoVersoesView
+        view_ver = ManutencaoVersoesView(self.root, service=service)
+        self.assertIsNotNone(view_ver.tree)
+        self.assertIsNotNone(view_ver.ent_versao)
+        self.assertIsNotNone(view_ver.txt_novidades)
+        view_ver._novo_registro()
+        view_ver.destroy()
+
+        # 3. NovidadesVersaoDialog
+        dialog = NovidadesVersaoDialog(
+            self.root,
+            idversao="5.0.0",
+            usucod="ADMIN",
+            texto_novidades="Notas de teste",
+            service=service,
+        )
+        self.assertIsNotNone(dialog)
+        dialog._confirmar()
+
 
 if __name__ == "__main__":
     unittest.main()
+

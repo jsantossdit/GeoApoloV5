@@ -9,7 +9,12 @@ import os
 import logging
 from typing import Optional, Dict, Any
 
-from configuracoes.models import ResultadoOperacao
+from configuracoes.models import (
+    ResultadoOperacao,
+    ConfiguracaoBancoDTO,
+    ResultadoTesteConexaoDTO,
+)
+
 from configuracoes.repository import ConfiguracoesRepository
 from configuracoes.service import ConfiguracoesService
 from entidades.database import obter_conexao_banco
@@ -20,7 +25,13 @@ logger = logging.getLogger(__name__)
 class ConfiguracoesView(tk.Toplevel):
     """Janela de Configurações Gerais e Parâmetros do GeoAlvo."""
 
-    def __init__(self, parent=None, connection=None, empresa_codigo: str = "001"):
+    def __init__(
+        self,
+        parent=None,
+        connection=None,
+        empresa_codigo: str = "001",
+        tab_index: int = 0,
+    ):
         super().__init__(parent)
         self.title("Parâmetros e Configurações Gerais - GeoAlvo")
         self.geometry("1080x660")
@@ -35,10 +46,7 @@ class ConfiguracoesView(tk.Toplevel):
             try:
                 self._conn = obter_conexao_banco()
             except Exception as exc:
-                messagebox.showwarning(
-                    "Aviso de Conexão",
-                    f"Não foi possível conectar automaticamente ao banco:\n{exc}\n\nConfigure o banco no menu Configurações."
-                )
+                pass
 
         self._repo = ConfiguracoesRepository(self._conn) if self._conn else None
         self._service = ConfiguracoesService(self._repo) if self._repo else None
@@ -48,6 +56,12 @@ class ConfiguracoesView(tk.Toplevel):
         self._configurar_estilos()
         self._criar_interface()
         self._carregar_configuracoes()
+
+        if tab_index > 0 and hasattr(self, "notebook"):
+            try:
+                self.notebook.select(tab_index)
+            except Exception:
+                pass
 
         self.bind("<Escape>", lambda e: self.destroy())
         self.bind("<F2>", lambda e: self._salvar_configuracoes())
@@ -122,6 +136,12 @@ class ConfiguracoesView(tk.Toplevel):
         self.tab_email = ttk.Frame(self.notebook, padding=15)
         self.notebook.add(self.tab_email, text="✉ Servidores de E-mail & Alertas")
         self._criar_aba_email()
+
+        # Aba 4: Banco de Dados & Rede
+        self.tab_banco = ttk.Frame(self.notebook, padding=15)
+        self.notebook.add(self.tab_banco, text="🗄 Servidores de Banco & Rede")
+        self._criar_aba_banco()
+
 
         # 3. Rodapé
         bottom_frame = tk.Frame(self, bg="#E2E8F0", height=46, bd=1, relief=tk.GROOVE)
@@ -253,10 +273,122 @@ class ConfiguracoesView(tk.Toplevel):
             set_entry(self.edt_motivo_ocorrencia, self._config_atual.get("motocorcodestr"))
             set_entry(self.edt_parceira, self._config_atual.get("entcategparceira"))
 
+            # Carrega parâmetros de banco
+            if self._service and hasattr(self, "edt_db_servidor"):
+                db_cfg = self._service.obter_config_banco()
+                self.combo_tipo_banco.set(db_cfg.tipo_banco)
+                set_entry(self.edt_db_servidor, db_cfg.servidor)
+                set_entry(self.edt_db_porta, str(db_cfg.porta))
+                set_entry(self.edt_db_nome, db_cfg.banco)
+                set_entry(self.edt_db_usuario, db_cfg.usuario)
+                set_entry(self.edt_db_senha, db_cfg.senha)
+                set_entry(self.edt_db_timeout, str(db_cfg.timeout))
+
             self.lbl_status.config(text=f"Configurações carregadas da empresa {self._empresa_codigo}.")
         except Exception as exc:
             logger.exception("Erro ao carregar configurações: %s", exc)
             messagebox.showerror("Erro", f"Erro ao carregar configurações:\n{exc}")
+
+    def _criar_aba_banco(self):
+        f = ttk.LabelFrame(self.tab_banco, text=" Servidor de Banco de Dados & Parâmetros de Rede ", padding=15)
+        f.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        ttk.Label(f, text="Tipo de Banco:", style="Config.TLabel").grid(row=0, column=0, sticky=tk.W, pady=6)
+        self.combo_tipo_banco = ttk.Combobox(f, values=["MSSQL", "MySQL", "SQLite"], state="readonly", width=18)
+        self.combo_tipo_banco.set("MSSQL")
+        self.combo_tipo_banco.grid(row=0, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Servidor / Host / IP:", style="Config.TLabel").grid(row=1, column=0, sticky=tk.W, pady=6)
+        self.edt_db_servidor = ttk.Entry(f, width=32, font=("Segoe UI", 9))
+        self.edt_db_servidor.insert(0, "localhost")
+        self.edt_db_servidor.grid(row=1, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Porta TCP:", style="Config.TLabel").grid(row=2, column=0, sticky=tk.W, pady=6)
+        self.edt_db_porta = ttk.Entry(f, width=12, font=("Segoe UI", 9))
+        self.edt_db_porta.insert(0, "1433")
+        self.edt_db_porta.grid(row=2, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Nome da Base (Database):", style="Config.TLabel").grid(row=3, column=0, sticky=tk.W, pady=6)
+        self.edt_db_nome = ttk.Entry(f, width=32, font=("Segoe UI", 9))
+        self.edt_db_nome.insert(0, "Apolo")
+        self.edt_db_nome.grid(row=3, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Usuário de Autenticação:", style="Config.TLabel").grid(row=4, column=0, sticky=tk.W, pady=6)
+        self.edt_db_usuario = ttk.Entry(f, width=22, font=("Segoe UI", 9))
+        self.edt_db_usuario.insert(0, "sa")
+        self.edt_db_usuario.grid(row=4, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Senha:", style="Config.TLabel").grid(row=5, column=0, sticky=tk.W, pady=6)
+        self.edt_db_senha = ttk.Entry(f, width=22, font=("Segoe UI", 9), show="*")
+        self.edt_db_senha.grid(row=5, column=1, sticky=tk.W, padx=8, pady=6)
+
+        ttk.Label(f, text="Timeout (segundos):", style="Config.TLabel").grid(row=6, column=0, sticky=tk.W, pady=6)
+        self.edt_db_timeout = ttk.Entry(f, width=10, font=("Segoe UI", 9))
+        self.edt_db_timeout.insert(0, "15")
+        self.edt_db_timeout.grid(row=6, column=1, sticky=tk.W, padx=8, pady=6)
+
+        bar_banco = ttk.Frame(f)
+        bar_banco.grid(row=7, column=0, columnspan=3, sticky=tk.W, pady=(16, 8))
+
+        ttk.Button(bar_banco, text="⚡ Testar Conectividade", command=self._testar_conexao_banco).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(bar_banco, text="💾 Salvar Configurações de Banco", command=self._salvar_config_banco).pack(side=tk.LEFT, padx=8)
+
+        self.lbl_db_resultado = ttk.Label(f, text="", font=("Segoe UI", 9, "bold"))
+        self.lbl_db_resultado.grid(row=8, column=0, columnspan=3, sticky=tk.W, pady=6)
+
+    def _testar_conexao_banco(self):
+        if not self._service:
+            return
+        try:
+            porta_val = int(self.edt_db_porta.get().strip() or 1433)
+            timeout_val = int(self.edt_db_timeout.get().strip() or 15)
+        except ValueError:
+            messagebox.showerror("Erro", "Porta e Timeout devem ser números inteiros válidos.")
+            return
+
+        dto = ConfiguracaoBancoDTO(
+            tipo_banco=self.combo_tipo_banco.get(),
+            servidor=self.edt_db_servidor.get().strip(),
+            porta=porta_val,
+            banco=self.edt_db_nome.get().strip(),
+            usuario=self.edt_db_usuario.get().strip(),
+            senha=self.edt_db_senha.get().strip(),
+            timeout=timeout_val,
+        )
+
+        res = self._service.testar_conexao_banco(dto)
+        if res.sucesso:
+            self.lbl_db_resultado.config(text=f"✔ {res.mensagem}", foreground="#2E7D32")
+            messagebox.showinfo("Conexão Bem-Sucedida", res.mensagem)
+        else:
+            self.lbl_db_resultado.config(text=f"✖ {res.mensagem}", foreground="#C62828")
+            messagebox.showerror("Falha na Conexão", res.mensagem)
+
+    def _salvar_config_banco(self):
+        if not self._service:
+            return
+        try:
+            porta_val = int(self.edt_db_porta.get().strip() or 1433)
+            timeout_val = int(self.edt_db_timeout.get().strip() or 15)
+        except ValueError:
+            messagebox.showerror("Erro", "Porta e Timeout devem ser números inteiros válidos.")
+            return
+
+        dto = ConfiguracaoBancoDTO(
+            tipo_banco=self.combo_tipo_banco.get(),
+            servidor=self.edt_db_servidor.get().strip(),
+            porta=porta_val,
+            banco=self.edt_db_nome.get().strip(),
+            usuario=self.edt_db_usuario.get().strip(),
+            senha=self.edt_db_senha.get().strip(),
+            timeout=timeout_val,
+        )
+
+        res = self._service.salvar_config_banco(dto)
+        if res.sucesso:
+            messagebox.showinfo("Sucesso", res.mensagem)
+        else:
+            messagebox.showerror("Erro", res.mensagem)
 
     def _salvar_configuracoes(self):
         if not self._service:
@@ -284,3 +416,4 @@ class ConfiguracoesView(tk.Toplevel):
             self._carregar_configuracoes()
         else:
             messagebox.showerror("Erro ao Salvar", res.mensagem)
+

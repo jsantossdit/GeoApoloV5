@@ -3,9 +3,15 @@ Repositório de Dados para Parâmetros do Sistema e E-mails.
 Preserva as otimizações SQL Server e hints WITH (NOLOCK).
 """
 
+import os
+import json
+import socket
+import time
 import logging
 from typing import Dict, Any, List, Optional
 from entidades.database import obter_conexao_banco
+from .models import ConfiguracaoBancoDTO, ResultadoTesteConexaoDTO
+
 
 logger = logging.getLogger(__name__)
 
@@ -205,3 +211,68 @@ class ConfiguracoesRepository:
         if self._conn and hasattr(self._conn, "commit"):
             self._conn.commit()
         return True
+
+    def carregar_config_banco(self, arquivo_json: str = "") -> ConfiguracaoBancoDTO:
+        """Carrega parâmetros de conexão do banco de dados salvos localmente."""
+        path = arquivo_json or os.path.join(os.path.expanduser("~"), ".geoapolo_db.json")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    dados = json.load(f)
+                return ConfiguracaoBancoDTO(
+                    tipo_banco=dados.get("tipo_banco", "MSSQL"),
+                    servidor=dados.get("servidor", "localhost"),
+                    porta=int(dados.get("porta", 1433)),
+                    banco=dados.get("banco", "Apolo"),
+                    usuario=dados.get("usuario", "sa"),
+                    senha=dados.get("senha", ""),
+                    timeout=int(dados.get("timeout", 15)),
+                    protocolo=dados.get("protocolo", "TCPIP"),
+                    driver=dados.get("driver", "ODBC Driver 17 for SQL Server"),
+                )
+            except Exception as e:
+                logger.warning("Falha ao ler arquivo de configuracao de banco: %s", e)
+        return ConfiguracaoBancoDTO()
+
+    def salvar_config_banco(self, config: ConfiguracaoBancoDTO, arquivo_json: str = "") -> bool:
+        """Persiste parâmetros de conexão do banco de dados localmente."""
+        path = arquivo_json or os.path.join(os.path.expanduser("~"), ".geoapolo_db.json")
+        try:
+            dados = {
+                "tipo_banco": config.tipo_banco,
+                "servidor": config.servidor,
+                "porta": config.porta,
+                "banco": config.banco,
+                "usuario": config.usuario,
+                "senha": config.senha,
+                "timeout": config.timeout,
+                "protocolo": config.protocolo,
+                "driver": config.driver,
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(dados, f, indent=2)
+            return True
+        except Exception as e:
+            logger.exception("Erro ao salvar arquivo de configuracao de banco: %s", e)
+            return False
+
+    def testar_conexao_socket(self, servidor: str, porta: int, timeout: int = 5) -> ResultadoTesteConexaoDTO:
+        """Testa a conectividade via socket TCP com medição de latência em milissegundos."""
+        inicio = time.time()
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(timeout)
+                s.connect((servidor, porta))
+            duracao_ms = round((time.time() - inicio) * 1000, 2)
+            return ResultadoTesteConexaoDTO(
+                sucesso=True,
+                mensagem=f"Conexão TCP com {servidor}:{porta} estabelecida com sucesso ({duracao_ms} ms).",
+                tempo_ms=duracao_ms,
+            )
+        except Exception as e:
+            duracao_ms = round((time.time() - inicio) * 1000, 2)
+            return ResultadoTesteConexaoDTO(
+                sucesso=False,
+                mensagem=f"Falha ao conectar em {servidor}:{porta}: {e}",
+                tempo_ms=duracao_ms,
+            )

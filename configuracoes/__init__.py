@@ -7,6 +7,8 @@ from configuracoes.models import (
     ServidorEmailDTO,
     ContaEmailDTO,
     ResultadoOperacao,
+    ConfiguracaoBancoDTO,
+    ResultadoTesteConexaoDTO,
 )
 from configuracoes.repository import ConfiguracoesRepository
 from configuracoes.service import ConfiguracoesService
@@ -17,7 +19,10 @@ __all__ = [
     "ServidorEmailDTO",
     "ContaEmailDTO",
     "ResultadoOperacao",
+    "ConfiguracaoBancoDTO",
+    "ResultadoTesteConexaoDTO",
     "ConfiguracoesRepository",
     "ConfiguracoesService",
     "ConfiguracoesView",
 ]
+

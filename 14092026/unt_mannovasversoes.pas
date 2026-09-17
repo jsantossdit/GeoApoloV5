@@ -58,7 +58,7 @@ implementation
 
 {$R *.dfm}
 
-uses funcoes, unt_dados, unt_principal, unt_logon;
+uses unt_versoes_types, unt_versoes_repository, unt_versoes_service, funcoes, unt_dados, unt_principal, unt_logon;
 
 procedure Tfrmcadnovasversoes.FormActivate(Sender: TObject);
 begin

@@ -52,3 +52,42 @@ class ResultadoOperacao:
     sucesso: bool
     mensagem: str
     codigo: Optional[str] = None
+
+
+@dataclass
+class ConfiguracaoBancoDTO:
+    """Configurações de Conexão com Banco de Dados e Parâmetros de Rede."""
+    tipo_banco: str = "MSSQL"  # 'MSSQL', 'MySQL', 'SQLite'
+    servidor: str = "localhost"
+    porta: int = 1433
+    banco: str = "Apolo"
+    usuario: str = "sa"
+    senha: str = ""
+    timeout: int = 15
+    protocolo: str = "TCPIP"
+    driver: str = "ODBC Driver 17 for SQL Server"
+
+    @property
+    def connection_string(self) -> str:
+        if self.tipo_banco.upper() == "MSSQL":
+            port_str = f",{self.porta}" if self.porta and self.porta != 1433 else ""
+            return (
+                f"DRIVER={{{self.driver}}};SERVER={self.servidor}{port_str};"
+                f"DATABASE={self.banco};UID={self.usuario};PWD={self.senha};"
+                f"Connection Timeout={self.timeout};"
+            )
+        elif self.tipo_banco.upper() == "MYSQL":
+            return (
+                f"host={self.servidor};port={self.porta};db={self.banco};"
+                f"user={self.usuario};passwd={self.senha}"
+            )
+        return f"sqlite:///{self.banco}"
+
+
+@dataclass
+class ResultadoTesteConexaoDTO:
+    """Resultado de teste de conectividade com servidor de banco de dados."""
+    sucesso: bool = False
+    mensagem: str = ""
+    tempo_ms: float = 0.0
+

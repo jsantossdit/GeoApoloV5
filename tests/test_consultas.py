@@ -192,6 +192,57 @@ class TestConsultasService(unittest.TestCase):
         self.mock_repo.salvar_consulta.return_value = True
         self.assertTrue(self.service.salvar_consulta(c_valida))
 
+    def test_validar_seguranca_sql_leitura(self):
+        # Validas
+        ok1, _ = self.service.validar_seguranca_sql_leitura("SELECT * FROM user_geoapolo_cidades")
+        self.assertTrue(ok1)
+
+        ok2, _ = self.service.validar_seguranca_sql_leitura("WITH cte AS (SELECT 1 AS x) SELECT * FROM cte")
+        self.assertTrue(ok2)
+
+        # Inválidas: vazia
+        inv_vazia, _ = self.service.validar_seguranca_sql_leitura("")
+        self.assertFalse(inv_vazia)
+
+        # Inválidas: comando proibido
+        inv_drop, msg_drop = self.service.validar_seguranca_sql_leitura("DROP TABLE user_geoapolo_usuarios")
+        self.assertFalse(inv_drop)
+
+        inv_del, msg_del = self.service.validar_seguranca_sql_leitura("SELECT 1; DELETE FROM user_geoapolo_usuarios")
+        self.assertFalse(inv_del)
+
+        inv_upd, _ = self.service.validar_seguranca_sql_leitura("UPDATE user_geoapolo_grupo SET descricao = 'x'")
+        self.assertFalse(inv_upd)
+
+    def test_exportar_resultado_csv(self):
+        import tempfile
+        import os
+
+        res = ResultadoConsultaDTO(
+            sucesso=True,
+            colunas=["codigo", "nome"],
+            linhas=[["01", "TESTE 1"], ["02", "TESTE 2"]],
+            total_registros=2
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            total = self.service.exportar_resultado_csv(res, tmp_path, delimitador=";")
+            self.assertEqual(total, 2)
+            self.assertTrue(os.path.exists(tmp_path))
+
+            with open(tmp_path, "r", encoding="utf-8-sig") as f:
+                content = f.read()
+                self.assertIn("codigo;nome", content)
+                self.assertIn("01;TESTE 1", content)
+                self.assertIn("02;TESTE 2", content)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
 
 if __name__ == "__main__":
     unittest.main()
+

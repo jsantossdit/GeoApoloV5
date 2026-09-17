@@ -146,3 +146,52 @@ class ConsultasService:
             return False
         status = "S" if autorizada else "N"
         return self._repo.atualizar_permissao_consulta(usucod.strip().upper(), codigo_consulta.strip().upper(), status)
+
+    def validar_seguranca_sql_leitura(self, sql: str) -> tuple[bool, str]:
+        """Valida que uma consulta imediata/dinâmica seja estritamente de leitura (SELECT/WITH)."""
+        if not sql or not sql.strip():
+            return False, "A sentença SQL não pode ser vazia."
+
+        sql_limpo = sql.strip()
+        sql_upper = sql_limpo.upper()
+
+        if not (sql_upper.startswith("SELECT") or sql_upper.startswith("WITH")):
+            return False, "Apenas consultas de leitura iniciadas com SELECT ou WITH são permitidas."
+
+        comandos_proibidos = [
+            r"\bDROP\b",
+            r"\bTRUNCATE\b",
+            r"\bDELETE\b",
+            r"\bUPDATE\b",
+            r"\bALTER\s+TABLE\b",
+            r"\bINSERT\s+INTO\b",
+        ]
+        for padrao in comandos_proibidos:
+            if re.search(padrao, sql_upper):
+                return False, f"Instrução modificadora ou destrutiva proibida detectada na consulta: {padrao}"
+
+        return True, ""
+
+    def exportar_resultado_csv(
+        self,
+        resultado: ResultadoConsultaDTO,
+        caminho_arquivo: str,
+        delimitador: str = ";"
+    ) -> int:
+        """Exporta o resultado da consulta para arquivo CSV UTF-8 de forma desacoplada e headless."""
+        import csv
+
+        if not resultado or not resultado.sucesso:
+            raise ValueError("Resultado da consulta inválido para exportação.")
+
+        total_linhas = 0
+        with open(caminho_arquivo, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f, delimiter=delimitador, quoting=csv.QUOTE_MINIMAL)
+            if resultado.colunas:
+                writer.writerow(resultado.colunas)
+            for linha in resultado.linhas:
+                writer.writerow(linha)
+                total_linhas += 1
+
+        return total_linhas
+

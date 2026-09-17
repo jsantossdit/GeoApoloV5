@@ -284,6 +284,32 @@ class TestUsuariosRepositorySQLite(unittest.TestCase):
         p_obj2_att = next(p for p in perfis_atualizados if p.codigo_objeto == "OBJ02")
         self.assertTrue(p_obj2_att.liberado)
 
+    def test_excluir_grupo_cascata(self):
+        res = self.repo.excluir_grupo("GRP01")
+        self.assertTrue(res)
+
+        cur = self.conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM USER_geoapolo_grupo WHERE codigo_grupo = 'GRP01'")
+        self.assertEqual(cur.fetchone()[0], 0)
+        cur.execute("SELECT COUNT(*) FROM USER_geoapolo_grupousuario WHERE codigo_grupo = 'GRP01'")
+        self.assertEqual(cur.fetchone()[0], 0)
+        cur.execute("SELECT COUNT(*) FROM USER_geoapolo_grupobjetos WHERE codigo_grupo = 'GRP01'")
+        self.assertEqual(cur.fetchone()[0], 0)
+
+    def test_listar_categorias_objetos_repo(self):
+        cats = self.repo.listar_categorias_objetos()
+        self.assertIn("Segurança", cats)
+        self.assertIn("Financeiro", cats)
+
+    def test_listar_objetos_perfil_filtro_categoria(self):
+        todos = self.repo.listar_objetos_perfil("GRP01")
+        self.assertEqual(len(todos), 2)
+
+        filtro = self.repo.listar_objetos_perfil("GRP01", categoria="Segurança")
+        self.assertEqual(len(filtro), 1)
+        self.assertEqual(filtro[0].codigo_objeto, "OBJ01")
+
+
 
 class TestUsuariosService(unittest.TestCase):
     """Testes de regras de negócio do UsuariosService com Mocks."""
@@ -374,6 +400,41 @@ class TestUsuariosService(unittest.TestCase):
         res_bloq = self.service.atualizar_acesso("G1", "OBJ1", liberado=False)
         self.assertTrue(res_bloq.sucesso)
         self.mock_repo.atualizar_status_acesso.assert_called_with("G1", "OBJ1", "N")
+
+    def test_excluir_grupo_service_validacoes(self):
+        r1 = self.service.excluir_grupo("")
+        self.assertFalse(r1.sucesso)
+        self.assertIn("deve ser fornecido", r1.mensagem)
+
+        self.mock_repo.excluir_grupo.return_value = True
+        r2 = self.service.excluir_grupo("GRP01")
+        self.assertTrue(r2.sucesso)
+        self.mock_repo.excluir_grupo.assert_called_with("GRP01")
+
+    def test_vincular_desvincular_usuario_grupo_service(self):
+        r1 = self.service.vincular_usuario_grupo("", "USR01")
+        self.assertFalse(r1.sucesso)
+
+        r2 = self.service.desvincular_usuario_grupo("GRP01", "")
+        self.assertFalse(r2.sucesso)
+
+        self.mock_repo.vincular_usuario_grupo.return_value = True
+        r3 = self.service.vincular_usuario_grupo("GRP01", "USR01")
+        self.assertTrue(r3.sucesso)
+
+        self.mock_repo.desvincular_usuario_grupo.return_value = True
+        r4 = self.service.desvincular_usuario_grupo("GRP01", "USR01")
+        self.assertTrue(r4.sucesso)
+
+    def test_listar_usuarios_grupo_service(self):
+        self.assertEqual(self.service.listar_usuarios_grupo(""), [])
+        self.mock_repo.listar_usuarios_grupo.return_value = [
+            VinculoGrupoUsuarioDTO("GRP01", "Admin", "U1", "user1", "Nome 1")
+        ]
+        res = self.service.listar_usuarios_grupo("GRP01")
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0].login, "user1")
+
 
 
 if __name__ == "__main__":

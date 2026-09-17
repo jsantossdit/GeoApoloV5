@@ -7,6 +7,9 @@ from .models import (
     EventoResumoDTO,
     InscricaoEventoDTO,
     ResultadoImportacaoDTO,
+    EventoDTO,
+    TipoEventoDTO,
+    ResultadoEventoDTO,
 )
 from .importer import PlanilhaInscricoesReader, somente_digitos
 from .repository import EventosRepository
@@ -17,9 +20,13 @@ __all__ = [
     "EventoResumoDTO",
     "InscricaoEventoDTO",
     "ResultadoImportacaoDTO",
+    "EventoDTO",
+    "TipoEventoDTO",
+    "ResultadoEventoDTO",
     "PlanilhaInscricoesReader",
     "somente_digitos",
     "EventosRepository",
     "EventosService",
     "ImportarInscritosEventosView",
 ]
+

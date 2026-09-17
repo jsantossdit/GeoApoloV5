@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Grids, DBGrids, StdCtrls, ExtCtrls, Buttons, ComCtrls, Data.DB,
-  Vcl.Imaging.jpeg, Vcl.Mask;
+  Vcl.Imaging.jpeg, Vcl.Mask,
+  unt_cadtipocampanha_types, unt_cadtipocampanha_repository, unt_cadtipocampanha_service;
 
 type
   Tfrmtipocampanha = class(TForm)

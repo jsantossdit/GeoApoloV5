@@ -212,7 +212,27 @@ class TestViewsHeadless(unittest.TestCase):
         self.assertIsNotNone(view.tree_cad)
         view.destroy()
 
+    def test_crm_view_headless(self):
+        """Verifica a inicialização da tela unificada de CRM (Ocorrências, Campanhas, Tratamentos)."""
+        from crm import CRMView, CRMService, CRMRepository
+
+        mock_repo = MagicMock(spec=CRMRepository)
+        mock_repo.listar_ocorrencias.return_value = []
+        mock_repo.listar_tipos_campanha.return_value = []
+        mock_repo.listar_tipos_tratamento.return_value = []
+        mock_repo.listar_areas_disponiveis.return_value = []
+        mock_repo.listar_motivos_por_area.return_value = []
+        mock_repo.listar_origens.return_value = []
+        mock_repo.listar_solicitantes.return_value = []
+
+        service = CRMService(mock_repo)
+        view = CRMView(self.root, service=service, codigo_empresa="01")
+
+        self.assertIsNotNone(view.tree_ocor)
+        self.assertIsNotNone(view.tree_camp)
+        self.assertIsNotNone(view.tree_trat)
+        view.destroy()
+
 
 if __name__ == "__main__":
     unittest.main()
-

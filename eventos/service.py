@@ -5,7 +5,14 @@ GeoApolo V5
 
 import logging
 from typing import List, Optional, Callable
-from .models import InscricaoEventoDTO, ResultadoImportacaoDTO, EventoResumoDTO
+from .models import (
+    InscricaoEventoDTO,
+    ResultadoImportacaoDTO,
+    EventoResumoDTO,
+    TipoEventoDTO,
+    EventoDTO,
+    ResultadoEventoDTO,
+)
 from .repository import EventosRepository
 from .importer import PlanilhaInscricoesReader
 
@@ -101,3 +108,71 @@ class EventosService:
 
     def listar_eventos(self) -> List[EventoResumoDTO]:
         return self._repo.listar_eventos_cadastrados()
+
+    def listar_eventos_completos(self, filtro_tema: str = "") -> List[EventoDTO]:
+        return self._repo.listar_eventos_cadastrados_completos(filtro_tema)
+
+    def obter_evento(self, id_evento: str) -> Optional[EventoDTO]:
+        if not id_evento or not id_evento.strip():
+            return None
+        return self._repo.obter_evento(id_evento.strip())
+
+    def salvar_evento(self, evento: EventoDTO) -> ResultadoEventoDTO:
+        if not evento.id_evento or not evento.id_evento.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Identificador do evento é obrigatório.")
+        if not evento.descricao or not evento.descricao.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Descrição do evento é obrigatória.")
+
+        try:
+            self._repo.salvar_evento(evento)
+            return ResultadoEventoDTO(
+                sucesso=True,
+                mensagem=f"Evento '{evento.descricao}' salvo com sucesso.",
+                id_gerado=evento.id_evento,
+            )
+        except Exception as exc:
+            logger.exception("Erro ao salvar evento: %s", exc)
+            return ResultadoEventoDTO(sucesso=False, mensagem=f"Erro ao salvar evento: {exc}")
+
+    def excluir_evento(self, id_evento: str) -> ResultadoEventoDTO:
+        if not id_evento or not id_evento.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Identificador do evento é obrigatório.")
+
+        try:
+            self._repo.excluir_evento(id_evento.strip())
+            return ResultadoEventoDTO(sucesso=True, mensagem="Evento excluído com sucesso.", id_gerado=id_evento)
+        except Exception as exc:
+            logger.exception("Erro ao excluir evento: %s", exc)
+            return ResultadoEventoDTO(sucesso=False, mensagem=f"Erro ao excluir evento: {exc}")
+
+    def listar_tipos_evento(self) -> List[TipoEventoDTO]:
+        return self._repo.listar_tipos_evento()
+
+    def salvar_tipo_evento(self, tipo: TipoEventoDTO) -> ResultadoEventoDTO:
+        if not tipo.tipo_event_cod or not tipo.tipo_event_cod.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Código do tipo de evento é obrigatório.")
+        if not tipo.descricao_tipo_evento or not tipo.descricao_tipo_evento.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Descrição do tipo de evento é obrigatória.")
+
+        try:
+            self._repo.salvar_tipo_evento(tipo)
+            return ResultadoEventoDTO(
+                sucesso=True,
+                mensagem=f"Tipo de evento '{tipo.descricao_tipo_evento}' salvo com sucesso.",
+                id_gerado=tipo.tipo_event_cod,
+            )
+        except Exception as exc:
+            logger.exception("Erro ao salvar tipo de evento: %s", exc)
+            return ResultadoEventoDTO(sucesso=False, mensagem=f"Erro ao salvar tipo de evento: {exc}")
+
+    def excluir_tipo_evento(self, tipo_cod: str) -> ResultadoEventoDTO:
+        if not tipo_cod or not tipo_cod.strip():
+            return ResultadoEventoDTO(sucesso=False, mensagem="Código do tipo de evento é obrigatório.")
+
+        try:
+            self._repo.excluir_tipo_evento(tipo_cod.strip())
+            return ResultadoEventoDTO(sucesso=True, mensagem="Tipo de evento excluído com sucesso.")
+        except Exception as exc:
+            logger.exception("Erro ao excluir tipo de evento: %s", exc)
+            return ResultadoEventoDTO(sucesso=False, mensagem=f"Erro ao excluir tipo de evento: {exc}")
+

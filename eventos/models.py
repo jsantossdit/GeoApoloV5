@@ -52,3 +52,30 @@ class ResultadoImportacaoDTO:
     total_salvos: int = 0
     sucesso: bool = True
     mensagem: str = ""
+
+
+@dataclass
+class TipoEventoDTO:
+    """Tipo ou categoria de evento cadastrado no sistema."""
+    tipo_event_cod: str
+    descricao_tipo_evento: str
+
+
+@dataclass
+class EventoDTO:
+    """Dados cadastrais completos de um evento (USER_geoapolo_eventos)."""
+    id_evento: str
+    descricao: str
+    data_inicial: str = ""
+    data_final: str = ""
+    tema_principal: str = ""
+    tipo_event_cod: str = ""
+    descricao_tipo_evento: str = ""
+
+
+@dataclass
+class ResultadoEventoDTO:
+    """Resultado de operações de cadastro de eventos."""
+    sucesso: bool = True
+    mensagem: str = ""
+    id_gerado: str = ""

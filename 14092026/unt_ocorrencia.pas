@@ -5,7 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ComCtrls, StdCtrls, Buttons, ExtCtrls, Grids, DBGrids, Mask,
-  DBCtrls, Menus, ImgList, Data.DB;
+  DBCtrls, Menus, ImgList, Data.DB,
+  unt_ocorrencia_types, unt_ocorrencia_repository, unt_ocorrencia_service;
 
 type
   Tfrmocorrencia = class(TForm)

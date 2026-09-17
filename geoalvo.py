@@ -228,7 +228,24 @@ def abrir_empresas_sistema(parent, tab_index=0):
         print(f"Erro ao abrir empresas: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir empresas:\n{e}")
 
+def abrir_crm_sistema(parent, tab_index=0):
+    """Abre a Central de CRM (Ocorrências, Campanhas, Tratamentos)."""
+    try:
+        from crm import CRMView
+        top = tk.Toplevel(parent)
+        top.title("Gestão de CRM, Campanhas & Ocorrências - GeoAlvo")
+        top.geometry("1020x680")
+        top.minsize(850, 520)
+        view = CRMView(top, codigo_empresa=getattr(parent, "empresa_ativa", "01"))
+        view.pack(fill=tk.BOTH, expand=True)
+        if tab_index > 0:
+            view.notebook.select(tab_index)
+    except Exception as e:
+        print(f"Erro ao abrir CRM: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir CRM:\n{e}")
+
 def sair_aplicacao():
+
     """Função para sair da aplicação"""
     if messagebox.askokcancel("Sair", "Deseja realmente sair do sistema?"):
         root.quit()
@@ -295,17 +312,20 @@ def main():
     cadastros_menu.add_cascade(label="Manutenção Centro de controle", menu=cadcctrlmenu)
     # 
     cadcrm = tk.Menu(cadastros_menu, tearoff=0)
-    cadcrm.add_command(label="Cadastros de &Eventos")
+    cadcrm.add_command(label="Ocorrências & Chamados", command=lambda: abrir_crm_sistema(root, 0))
+    cadcrm.add_command(label="Cadastros de &Eventos", command=lambda: abrir_crm_sistema(root, 0))
     cadcrm.add_command(label="Importar Inscritos de Eventos", command=lambda: abrir_importa_eventos(root))
-    cadcrm.add_command(label="Cadastros de Tipos de Campanhas")
+    cadcrm.add_command(label="Cadastros de Tipos de Campanhas", command=lambda: abrir_crm_sistema(root, 1))
+    cadcrm.add_command(label="Cadastros de Tipos de Tratamento", command=lambda: abrir_crm_sistema(root, 2))
     cadastros_menu.add_cascade(label="CRM", menu=cadcrm)
     # 
     cadentidades = tk.Menu(cadastros_menu, tearoff=0)
     cadentidades.add_command(label="Categorias", command=lambda: abrir_categorias(root))
     cadentidades.add_command(label="Entidades", command=lambda: abrir_entidades(root))
     cadentidades.add_command(label="Importa Entidades")
-    cadentidades.add_command(label="Tipos de Tratamento")
+    cadentidades.add_command(label="Tipos de Tratamento", command=lambda: abrir_crm_sistema(root, 2))
     cadastros_menu.add_cascade(label="Entidades", menu=cadentidades)
+
     # 
     cadfinanc = tk.Menu(cadastros_menu, tearoff=0)
     cadfinanc.add_command(label="Plano de Classes de Receitas/Despesas")
@@ -368,11 +388,11 @@ def main():
     alvo_menu.add_cascade(label="Contabilidade", menu=alvocontabilidade)
     # 
     alvocrm = tk.Menu(alvo_menu, tearoff=0)
-    alvocrm.add_command(label="Administração de Campanhas")
+    alvocrm.add_command(label="Administração de Campanhas", command=lambda: abrir_crm_sistema(root, 1))
     alvocrm.add_command(label="Atualiza Valores de Campanhas")
     alvocrm.add_command(label="E-Mail Marketing de Campanhas")
     alvocrm.add_command(label="TeleMarketing de Campanhas")
-    alvocrm.add_command(label="Soluções de Ocorrências")
+    alvocrm.add_command(label="Soluções de Ocorrências", command=lambda: abrir_crm_sistema(root, 0))
     alvocrm.add_command(label="Mesclagem de Entidades", command=lambda: abrir_matchcode_sistema(root, 1))
     alvocrmrcc = tk.Menu(alvocrm, tearoff=0)
     alvocrmrcc.add_command(label="Importar Inscrições de Eventos/Congressos", command=lambda: abrir_importa_eventos(root))

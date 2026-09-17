@@ -6,7 +6,13 @@ GeoApolo V5
 import logging
 from typing import List, Tuple, Optional
 from entidades.database import obter_conexao_banco
-from .models import InscricaoEventoDTO, EventoResumoDTO
+from .models import (
+    InscricaoEventoDTO,
+    EventoResumoDTO,
+    TipoEventoDTO,
+    EventoDTO,
+    ResultadoEventoDTO,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +22,13 @@ class EventosRepository:
 
     def __init__(self, connection=None):
         self._conn = connection
+
+    @property
+    def _is_sql_server(self) -> bool:
+        return self._conn is not None and not hasattr(self._conn, "isolation_level")
+
+    def _nolock(self) -> str:
+        return "WITH (NOLOCK)" if self._is_sql_server else ""
 
     def _get_cursor(self):
         if self._conn is None:
@@ -175,9 +188,10 @@ class EventosRepository:
 
     def listar_eventos_cadastrados(self) -> List[EventoResumoDTO]:
         cursor = self._get_cursor()
-        sql = """
+        nolock = self._nolock()
+        sql = f"""
             SELECT idevento, COUNT(*) as total
-            FROM congresso_rcc WITH (NOLOCK)
+            FROM congresso_rcc {nolock}
             GROUP BY idevento
             ORDER BY idevento DESC
         """
@@ -186,3 +200,156 @@ class EventosRepository:
             EventoResumoDTO(id=str(r[0]).strip(), descricao=f"Evento {r[0]}", total_inscritos=int(r[1]))
             for r in cursor.fetchall()
         ]
+
+    def listar_eventos_cadastrados_completos(self, filtro_tema: str = "") -> List[EventoDTO]:
+        """Lista eventos da tabela USER_geoapolo_eventos com descrição do tipo."""
+        cursor = self._get_cursor()
+        nolock = self._nolock()
+        sql = f"""
+            SELECT uge.idevento, uge.descricao,
+                   COALESCE(uge.data_inicial, '') AS dt_ini_str,
+                   COALESCE(uge.data_final, '') AS dt_fim_str,
+                   COALESCE(uge.tema_principal, '') AS tema_principal,
+                   COALESCE(uge.tipoeventcod, '') AS tipoeventcod,
+                   COALESCE(te.descricao_tipo_evento, '') AS desc_tipo
+            FROM USER_geoapolo_eventos uge {nolock}
+            LEFT JOIN USER_geoapolo_tipo_eventos te {nolock} ON uge.tipoeventcod = te.tipoeventcod
+            WHERE 1=1
+        """
+        params = []
+        if filtro_tema and filtro_tema.strip():
+            sql += " AND (uge.tema_principal LIKE ? OR uge.descricao LIKE ?)"
+            termo = f"%{filtro_tema.strip()}%"
+            params.extend([termo, termo])
+        sql += " ORDER BY uge.data_inicial DESC"
+        cursor.execute(sql, params)
+        itens = []
+        for r in cursor.fetchall():
+            itens.append(
+                EventoDTO(
+                    id_evento=str(r[0]).strip(),
+                    descricao=str(r[1] or "").strip(),
+                    data_inicial=str(r[2] or "").strip(),
+                    data_final=str(r[3] or "").strip(),
+                    tema_principal=str(r[4] or "").strip(),
+                    tipo_event_cod=str(r[5] or "").strip(),
+                    descricao_tipo_evento=str(r[6] or "").strip(),
+                )
+            )
+        return itens
+
+    def obter_evento(self, id_evento: str) -> Optional[EventoDTO]:
+        """Busca um evento específico por seu id."""
+        cursor = self._get_cursor()
+        nolock = self._nolock()
+        sql = f"""
+            SELECT uge.idevento, uge.descricao,
+                   COALESCE(uge.data_inicial, '') AS dt_ini_str,
+                   COALESCE(uge.data_final, '') AS dt_fim_str,
+                   COALESCE(uge.tema_principal, '') AS tema_principal,
+                   COALESCE(uge.tipoeventcod, '') AS tipoeventcod,
+                   COALESCE(te.descricao_tipo_evento, '') AS desc_tipo
+            FROM USER_geoapolo_eventos uge {nolock}
+            LEFT JOIN USER_geoapolo_tipo_eventos te {nolock} ON uge.tipoeventcod = te.tipoeventcod
+            WHERE uge.idevento = ?
+        """
+        cursor.execute(sql, [id_evento])
+        r = cursor.fetchone()
+        if not r:
+            return None
+        return EventoDTO(
+            id_evento=str(r[0]).strip(),
+            descricao=str(r[1] or "").strip(),
+            data_inicial=str(r[2] or "").strip(),
+            data_final=str(r[3] or "").strip(),
+            tema_principal=str(r[4] or "").strip(),
+            tipo_event_cod=str(r[5] or "").strip(),
+            descricao_tipo_evento=str(r[6] or "").strip(),
+        )
+
+    def salvar_evento(self, evento: EventoDTO) -> bool:
+        """Cria ou atualiza evento na tabela USER_geoapolo_eventos."""
+        cursor = self._get_cursor()
+        cursor.execute("SELECT 1 FROM USER_geoapolo_eventos WHERE idevento = ?", [evento.id_evento])
+        existe = cursor.fetchone() is not None
+        if existe:
+            sql = """
+                UPDATE USER_geoapolo_eventos
+                SET descricao = ?, data_inicial = ?, data_final = ?, tema_principal = ?, tipoeventcod = ?
+                WHERE idevento = ?
+            """
+            cursor.execute(
+                sql,
+                [
+                    evento.descricao,
+                    evento.data_inicial,
+                    evento.data_final,
+                    evento.tema_principal,
+                    evento.tipo_event_cod,
+                    evento.id_evento,
+                ],
+            )
+        else:
+            sql = """
+                INSERT INTO USER_geoapolo_eventos (idevento, descricao, data_inicial, data_final, tema_principal, tipoeventcod)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """
+            cursor.execute(
+                sql,
+                [
+                    evento.id_evento,
+                    evento.descricao,
+                    evento.data_inicial,
+                    evento.data_final,
+                    evento.tema_principal,
+                    evento.tipo_event_cod,
+                ],
+            )
+        self.commit()
+        return True
+
+    def excluir_evento(self, id_evento: str) -> bool:
+        """Remove um evento cadastrado."""
+        cursor = self._get_cursor()
+        cursor.execute("DELETE FROM USER_geoapolo_eventos WHERE idevento = ?", [id_evento])
+        self.commit()
+        return True
+
+    def listar_tipos_evento(self) -> List[TipoEventoDTO]:
+        """Lista os tipos de eventos disponíveis."""
+        cursor = self._get_cursor()
+        nolock = self._nolock()
+        sql = f"SELECT tipoeventcod, descricao_tipo_evento FROM USER_geoapolo_tipo_eventos {nolock} ORDER BY descricao_tipo_evento ASC"
+        cursor.execute(sql)
+        return [
+            TipoEventoDTO(
+                tipo_event_cod=str(r[0]).strip(),
+                descricao_tipo_evento=str(r[1] or "").strip(),
+            )
+            for r in cursor.fetchall()
+        ]
+
+    def salvar_tipo_evento(self, tipo: TipoEventoDTO) -> bool:
+        """Salva ou atualiza um tipo de evento."""
+        cursor = self._get_cursor()
+        cursor.execute("SELECT 1 FROM USER_geoapolo_tipo_eventos WHERE tipoeventcod = ?", [tipo.tipo_event_cod])
+        if cursor.fetchone():
+            cursor.execute(
+                "UPDATE USER_geoapolo_tipo_eventos SET descricao_tipo_evento = ? WHERE tipoeventcod = ?",
+                [tipo.descricao_tipo_evento, tipo.tipo_event_cod],
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO USER_geoapolo_tipo_eventos (tipoeventcod, descricao_tipo_evento) VALUES (?, ?)",
+                [tipo.tipo_event_cod, tipo.descricao_tipo_evento],
+            )
+        self.commit()
+        return True
+
+    def excluir_tipo_evento(self, tipo_cod: str) -> bool:
+        """Exclui um tipo de evento."""
+        cursor = self._get_cursor()
+        cursor.execute("DELETE FROM USER_geoapolo_tipo_eventos WHERE tipoeventcod = ?", [tipo_cod])
+        self.commit()
+        return True
+

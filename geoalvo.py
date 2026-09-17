@@ -164,11 +164,69 @@ def abrir_relaciona_diocese_entidade(parent):
         print(f"Erro ao abrir relacionamento de diocese e entidade: {e}")
         messagebox.showerror("Erro", f"Erro ao abrir relacionamento de diocese e entidade:\n{e}")
 
+def abrir_usuarios_sistema(parent, tab_index=0):
+    """Abre a tela unificada de Gestão de Usuários, Grupos e Perfis de Acesso"""
+    try:
+        from usuarios import UsuariosView
+        top = tk.Toplevel(parent)
+        top.title("Gestão de Usuários, Grupos e Perfis de Acesso - GeoAlvo")
+        top.geometry("1050x660")
+        top.minsize(850, 520)
+        view = UsuariosView(top)
+        view.pack(fill=tk.BOTH, expand=True)
+        if tab_index > 0:
+            view.notebook.select(tab_index)
+    except Exception as e:
+        print(f"Erro ao abrir gestão de usuários: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir gestão de usuários:\n{e}")
 
+def abrir_consultas_sistema(parent, tab_index=0):
+    """Abre o Motor de Consultas Dinâmicas & Permissões SQL"""
+    try:
+        from consultas import ConsultasView
+        top = tk.Toplevel(parent)
+        top.title("Motor de Consultas Dinâmicas & Permissões SQL - GeoAlvo")
+        top.geometry("1050x640")
+        top.minsize(850, 500)
+        view = ConsultasView(top)
+        view.pack(fill=tk.BOTH, expand=True)
+        if tab_index > 0:
+            view.notebook.select(tab_index)
+    except Exception as e:
+        print(f"Erro ao abrir consultas dinâmicas: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir consultas dinâmicas:\n{e}")
 
+def abrir_matchcode_sistema(parent, tab_index=0):
+    """Abre a Unificação de Cadastros e Duplicidades (MatchCode)"""
+    try:
+        from matchcode import MatchCodeView
+        top = tk.Toplevel(parent)
+        top.title("Unificação de Cadastros Duplicados (MatchCode) - GeoAlvo")
+        top.geometry("850x520")
+        top.minsize(700, 420)
+        view = MatchCodeView(top)
+        view.pack(fill=tk.BOTH, expand=True)
+        if tab_index > 0:
+            view.notebook.select(tab_index)
+    except Exception as e:
+        print(f"Erro ao abrir MatchCode: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir MatchCode:\n{e}")
 
-
-
+def abrir_empresas_sistema(parent, tab_index=0):
+    """Abre a tela de Multi-Empresas e Seleção de Contexto Corporativo (<F2>)"""
+    try:
+        from empresas import EmpresasView
+        top = tk.Toplevel(parent)
+        top.title("Multi-Empresas & Contexto Corporativo - GeoAlvo")
+        top.geometry("880x560")
+        top.minsize(720, 440)
+        view = EmpresasView(top)
+        view.pack(fill=tk.BOTH, expand=True)
+        if tab_index > 0:
+            view.notebook.select(tab_index)
+    except Exception as e:
+        print(f"Erro ao abrir empresas: {e}")
+        messagebox.showerror("Erro", f"Erro ao abrir empresas:\n{e}")
 
 def sair_aplicacao():
     """Função para sair da aplicação"""
@@ -208,15 +266,16 @@ def main():
     config_menu.add_cascade(label="Parâmetros do Sistema", menu=sistema_menu)
     
     permissoes_menu = tk.Menu(config_menu, tearoff=0)
-    permissoes_menu.add_command(label="Administração de Usuários")
-    permissoes_menu.add_command(label="Permissões de Grupos e Usuários")
-    permissoes_menu.add_command(label="Permissões de Grupos")
+    permissoes_menu.add_command(label="Administração de Usuários", command=lambda: abrir_usuarios_sistema(root, 0))
+    permissoes_menu.add_command(label="Permissões de Grupos e Usuários", command=lambda: abrir_usuarios_sistema(root, 1))
+    permissoes_menu.add_command(label="Permissões de Grupos", command=lambda: abrir_usuarios_sistema(root, 2))
     permissoes_menu.add_command(label="Clonar Permissões de Usuários", command=lambda: abrir_clonar_permissoes(root))
     permissoes_menu.add_command(label="Permissão em Contas Financeiras", command=lambda: abrir_contas_financeiras_usuario(root))
     permissoes_menu.add_command(label="Desativação / Desligamento de Usuários", command=lambda: abrir_desligamento_usuarios(root))
+    permissoes_menu.add_command(label="Mesclagem / MatchCode de Usuários", command=lambda: abrir_matchcode_sistema(root, 0))
     config_menu.add_cascade(label="Permissões de Acesso", menu=permissoes_menu)
     
-    config_menu.add_command(label="Trocar de Empresa <F2>")
+    config_menu.add_command(label="Trocar de Empresa <F2>", command=lambda: abrir_empresas_sistema(root, 0))
     menu_bar.add_cascade(label="Configurações", menu=config_menu)
 
     # Menu Cadastros
@@ -263,10 +322,10 @@ def main():
     # 
     cadgeral = tk.Menu(cadastros_menu, tearoff=0)
     cadgeral.add_command(label="Departamentos")
-    cadgeral.add_command(label="Empresas")
+    cadgeral.add_command(label="Empresas", command=lambda: abrir_empresas_sistema(root, 1))
     cadastros_menu.add_cascade(label="Geral", menu=cadgeral)
     # 
-    cadastros_menu.add_command(label="Usuários GeoApolo")   
+    cadastros_menu.add_command(label="Usuários GeoApolo", command=lambda: abrir_usuarios_sistema(root, 0))   
     
     menu_bar.add_cascade(label="Cadastros", menu=cadastros_menu)
 
@@ -314,7 +373,7 @@ def main():
     alvocrm.add_command(label="E-Mail Marketing de Campanhas")
     alvocrm.add_command(label="TeleMarketing de Campanhas")
     alvocrm.add_command(label="Soluções de Ocorrências")
-    alvocrm.add_command(label="Mesclagem de Entidades")
+    alvocrm.add_command(label="Mesclagem de Entidades", command=lambda: abrir_matchcode_sistema(root, 1))
     alvocrmrcc = tk.Menu(alvocrm, tearoff=0)
     alvocrmrcc.add_command(label="Importar Inscrições de Eventos/Congressos", command=lambda: abrir_importa_eventos(root))
     alvocrmrcc.add_command(label="Importa Monitoramento Lembrete de Doações")
@@ -349,7 +408,7 @@ def main():
     # 
     alvogeral = tk.Menu(alvo_menu, tearoff=0)
     alvogeral.add_command(label="Departamentos")
-    alvogeral.add_command(label="Empresas")
+    alvogeral.add_command(label="Empresas", command=lambda: abrir_empresas_sistema(root, 1))
     alvo_menu.add_cascade(label="Geral", menu=alvogeral)
     # 
     alvousersalvo = tk.Menu(alvo_menu, tearoff=0)
@@ -363,8 +422,8 @@ def main():
     # Menu Utilitários
     utilitarios_menu = tk.Menu(menu_bar, tearoff=0)
     utilmenuimediatas = tk.Menu(menu_bar, tearoff=0)        
-    utilmenuimediatas.add_command(label="Cadastrar Consultas")
-    utilmenuimediatas.add_command(label="Executar Consultas")
+    utilmenuimediatas.add_command(label="Cadastrar Consultas", command=lambda: abrir_consultas_sistema(root, 1))
+    utilmenuimediatas.add_command(label="Executar Consultas", command=lambda: abrir_consultas_sistema(root, 0))
     # 
     utilitarios_menu.add_cascade(label="Consultas Imediatas", menu=utilmenuimediatas)    
     utilitarios_menu.add_command(label="Validação de Licenças")
@@ -384,6 +443,7 @@ def main():
     
     # Configura o menu na janela
     root.config(menu=menu_bar)
+    root.bind("<F2>", lambda event=None: abrir_empresas_sistema(root, 0))
 
     # Criar a toolbar    
     toolbar_manager = ToolbarManager(root)

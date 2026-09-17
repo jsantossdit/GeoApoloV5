@@ -1,4 +1,4 @@
-﻿unit unt_users;
+unit unt_users;
 
 interface
 
@@ -113,7 +113,8 @@ function integraapolo1 : string; export;
 
 implementation
 
-uses funcoes, unt_dados, unt_logon, unt_principal, unt_consultav3;
+uses funcoes, unt_dados, unt_logon, unt_principal, unt_consultav3,
+  unt_users_types, unt_users_repository, unt_users_service;
 
 
 {$R *.dfm}

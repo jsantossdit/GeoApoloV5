@@ -75,7 +75,8 @@ function mostra_sistemasusuarios(codigousuario:string) : string; export;
 
 implementation
 
-uses funcoes, unt_dados, unt_principal, unt_selecionaempresa, unt_logon;
+uses funcoes, unt_dados, unt_principal, unt_selecionaempresa, unt_logon,
+  unt_users_types, unt_users_repository, unt_users_service;
 
 {$R *.dfm}
 

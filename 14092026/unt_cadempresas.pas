@@ -58,7 +58,8 @@ implementation
 {$R *.dfm}
 
 uses
-  funcoes, unt_dados, unt_principal;
+  funcoes, unt_dados, unt_principal,
+  unt_empresa_types, unt_empresa_repository, unt_empresa_service;
 
 { ---------------------------------------------------------------------------
   Funções auxiliares (escopo de unit, padrão do projeto)

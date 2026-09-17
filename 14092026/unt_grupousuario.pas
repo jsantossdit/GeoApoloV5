@@ -62,7 +62,8 @@ function mostravinculos(codigo_grupo : string) : string; export;
   
 implementation
 
-uses funcoes, unt_dados, unt_logon, unt_principal;
+uses funcoes, unt_dados, unt_logon, unt_principal,
+  unt_users_types, unt_users_repository, unt_users_service;
 
 {$R *.dfm}
 

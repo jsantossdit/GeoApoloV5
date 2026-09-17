@@ -121,7 +121,8 @@ var
   frmconfigperfil : Tfrmconfigperfil;
 implementation
 uses
-  unt_principal, funcoes, unt_dados, unt_logon, unt_nomesamigaveis;
+  unt_principal, funcoes, unt_dados, unt_logon, unt_nomesamigaveis,
+  unt_users_types, unt_users_repository, unt_users_service;
 {$R *.dfm}
 { ══════════════════════════════════════════════════════════════════════ }
 {  TFRMCONFIGPERFIL — Inicialização                                     }

@@ -36,7 +36,8 @@ implementation
 
 {$R *.dfm}
 
-uses unt_dados, funcoes, unt_principal, unt_novidadesversao, unt_logon;
+uses unt_dados, funcoes, unt_principal, unt_novidadesversao, unt_logon,
+  unt_empresa_types, unt_empresa_repository, unt_empresa_service;
 
 function selecionaempresa : string;
 begin

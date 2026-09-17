@@ -151,6 +151,67 @@ class TestViewsHeadless(unittest.TestCase):
         self.assertIsNotNone(view_dio.grid_entidades)
         view_dio.window.destroy()
 
+    def test_usuarios_view_headless(self):
+        """Verifica a inicialização da tela unificada de Gestão de Usuários, Grupos e Perfis."""
+        from usuarios import UsuariosView, UsuariosService, UsuariosRepository
+
+        mock_repo = MagicMock(spec=UsuariosRepository)
+        mock_repo.listar_departamentos.return_value = []
+        mock_repo.listar_sistemas.return_value = []
+        mock_repo.listar_usuarios.return_value = []
+        mock_repo.listar_grupos.return_value = []
+        mock_repo.listar_categorias_objetos.return_value = []
+        mock_repo.listar_sistemas_usuario.return_value = []
+        mock_repo.listar_usuarios_grupo.return_value = []
+        mock_repo.listar_objetos_perfil.return_value = []
+
+        service = UsuariosService(mock_repo)
+        view = UsuariosView(self.root, service=service)
+
+        self.assertIsNotNone(view.tree_users)
+        self.assertIsNotNone(view.tree_grupos)
+        self.assertIsNotNone(view.tree_perfis)
+        view.destroy()
+
+    def test_consultas_e_matchcode_views_headless(self):
+        """Verifica a inicialização das views de Consultas Dinâmicas e MatchCode."""
+        from consultas import ConsultasView, ConsultasService, ConsultasRepository
+        from matchcode import MatchCodeView, MatchCodeService, MatchCodeRepository
+
+        # Consultas
+        mock_c_repo = MagicMock(spec=ConsultasRepository)
+        mock_c_repo.listar_consultas.return_value = []
+        mock_c_repo.executar_sql_dinamico.return_value = MagicMock(sucesso=True, colunas=["A"], linhas=[["1"]], total_registros=1)
+        c_service = ConsultasService(mock_c_repo)
+        view_c = ConsultasView(self.root, service=c_service)
+        self.assertIsNotNone(view_c.tree_resultados)
+        self.assertIsNotNone(view_c.tree_consultas)
+        view_c.destroy()
+
+        # MatchCode
+        mock_m_repo = MagicMock(spec=MatchCodeRepository)
+        mock_m_repo.obter_usuario.return_value = ("U1", "Usuario 1", "A")
+        mock_m_repo.obter_entidade.return_value = ("E1", "Entidade 1")
+        m_service = MatchCodeService(mock_m_repo)
+        view_m = MatchCodeView(self.root, service=m_service)
+        self.assertIsNotNone(view_m.ent_user_orig)
+        self.assertIsNotNone(view_m.ent_ent_orig)
+        view_m.destroy()
+
+    def test_empresas_view_headless(self):
+        """Verifica a inicialização da tela de Multi-Empresas e Contexto Corporativo."""
+        from empresas import EmpresasView, EmpresasService, EmpresasRepository
+
+        mock_repo = MagicMock(spec=EmpresasRepository)
+        mock_repo.listar_empresas.return_value = []
+        mock_repo.sincronizar_empresas_apolo.return_value = 0
+        service = EmpresasService(mock_repo)
+
+        view = EmpresasView(self.root, service=service)
+        self.assertIsNotNone(view.tree_selecao)
+        self.assertIsNotNone(view.tree_cad)
+        view.destroy()
+
 
 if __name__ == "__main__":
     unittest.main()

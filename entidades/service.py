@@ -5,16 +5,34 @@ Correspondente a unt_entidades_service.pas.
 Totalmente isolada de interface visual (Tkinter/Web) e frameworks de tela.
 """
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 import json
 import logging
 from typing import List, Dict, Any, Tuple, Optional
-from entidades.models import (
-    ItemComparacao,
-    DecisaoLinha,
-    ResultadoOperacao,
-    EntidadeEdicao,
-)
-from entidades.repository import EntidadeRepository
+
+try:
+    from entidades.models import (
+        ItemComparacao,
+        DecisaoLinha,
+        ResultadoOperacao,
+        EntidadeEdicao,
+    )
+    from entidades.repository import EntidadeRepository
+except (ImportError, ModuleNotFoundError):
+    from models import (
+        ItemComparacao,
+        DecisaoLinha,
+        ResultadoOperacao,
+        EntidadeEdicao,
+    )
+    from repository import EntidadeRepository
 
 logger = logging.getLogger(__name__)
 

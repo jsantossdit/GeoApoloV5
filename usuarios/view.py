@@ -4,19 +4,38 @@ GeoApolo V5
 Desenvolvido em Tkinter / ttk com suporte a execução headless em testes unitários.
 """
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional, List
 
-from usuarios.models import (
-    UsuarioDTO,
-    DepartamentoDTO,
-    SistemaDTO,
-    GrupoUsuarioDTO,
-    VinculoGrupoUsuarioDTO,
-    PerfilAcessoItemDTO,
-)
-from usuarios.service import UsuariosService
+try:
+    from usuarios.models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        PerfilAcessoItemDTO,
+    )
+    from usuarios.service import UsuariosService
+except (ImportError, ModuleNotFoundError):
+    from models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        PerfilAcessoItemDTO,
+    )
+    from service import UsuariosService
 
 
 class UsuariosView(ttk.Frame):
@@ -339,19 +358,35 @@ class UsuariosView(ttk.Frame):
     # =========================================================================
     def _carregar_dados_iniciais(self):
         try:
-            self.departamentos = self.service.listar_departamentos()
-            dept_values = [f"{d.codigo_departamento} - {d.nome_departamento}" for d in self.departamentos]
-            self.cbo_departamento["values"] = dept_values
-
-            self.sistemas_disponiveis = self.service.listar_sistemas()
-            sis_values = [f"{s.codigo_sistema} - {s.descricao}" for s in self.sistemas_disponiveis]
-            self.cbo_novo_sistema["values"] = sis_values
-
+            self.carregar_departamentos()
+            self.carregar_sistemas()
             self.pesquisar_usuarios()
             self.carregar_grupos()
             self.carregar_categorias_perfil()
         except Exception as e:
             # Em modo headless / testes, erros silenciosos de banco são tolerados
+            pass
+
+    def carregar_departamentos(self):
+        """Carrega os departamentos cadastrados na tabela USER_geoapolo_departamentos."""
+        if not self.service:
+            return
+        try:
+            self.departamentos = self.service.listar_departamentos()
+            dept_values = [f"{d.codigo_departamento} - {d.nome_departamento}" for d in self.departamentos]
+            self.cbo_departamento["values"] = dept_values
+        except Exception:
+            pass
+
+    def carregar_sistemas(self):
+        """Carrega os sistemas corporativos disponíveis."""
+        if not self.service:
+            return
+        try:
+            self.sistemas_disponiveis = self.service.listar_sistemas()
+            sis_values = [f"{s.codigo_sistema} - {s.descricao}" for s in self.sistemas_disponiveis]
+            self.cbo_novo_sistema["values"] = sis_values
+        except Exception:
             pass
 
     def pesquisar_usuarios(self):
@@ -400,12 +435,19 @@ class UsuariosView(ttk.Frame):
 
         self.var_user_ativo.set(usuario.ativo)
 
-        # Seleciona depto na combo
+        # Seleciona depto na combo por código ou por nome
+        cod_depto = str(usuario.codigo_departamento or "").strip()
+        nome_depto = str(usuario.nome_departamento or "").strip().upper()
+        depto_encontrado = False
         for v in self.cbo_departamento["values"]:
-            if v.startswith(f"{usuario.codigo_departamento} -"):
+            partes = v.split(" - ", 1)
+            v_cod = partes[0].strip()
+            v_nome = partes[1].strip().upper() if len(partes) > 1 else ""
+            if (cod_depto and v_cod == cod_depto) or (nome_depto and v_nome == nome_depto):
                 self.cbo_departamento.set(v)
+                depto_encontrado = True
                 break
-        else:
+        if not depto_encontrado:
             self.cbo_departamento.set("")
 
         self._carregar_sistemas_usuario(usuario.usucod)
@@ -437,8 +479,39 @@ class UsuariosView(ttk.Frame):
         senha = self.ent_senha.get().strip()
         ativo = "A" if self.var_user_ativo.get() else "I"
 
-        depto_sel = self.cbo_departamento.get()
-        cod_depto = depto_sel.split(" - ")[0] if " - " in depto_sel else ""
+        if not usucod:
+            messagebox.showwarning("Aviso", "O código (usucod) do usuário é obrigatório.")
+            self.ent_usucod.focus_set()
+            return
+
+        if not login:
+            messagebox.showwarning("Aviso", "O login de acesso é obrigatório.")
+            self.ent_login.focus_set()
+            return
+
+        if not nome:
+            messagebox.showwarning("Aviso", "O nome completo do usuário é obrigatório.")
+            self.ent_nome.focus_set()
+            return
+
+        depto_sel = self.cbo_departamento.get().strip()
+        cod_depto = depto_sel.split(" - ")[0].strip() if " - " in depto_sel else depto_sel
+
+        # Pergunta de confirmação da operação (Inclusão vs Alteração)
+        usuario_existente = self.service.obter_usuario(usucod) if self.service else None
+        if usuario_existente:
+            confirmar = messagebox.askyesno(
+                "Confirmação de Alteração",
+                f"Deseja realmente confirmar a alteração dos dados do usuário '{usucod}' ({nome})?",
+            )
+        else:
+            confirmar = messagebox.askyesno(
+                "Confirmação de Inclusão",
+                f"Deseja realmente confirmar a inclusão do novo usuário '{usucod}' ({nome})?",
+            )
+
+        if not confirmar:
+            return
 
         u = UsuarioDTO(
             usucod=usucod,
@@ -463,7 +536,11 @@ class UsuariosView(ttk.Frame):
             messagebox.showwarning("Aviso", "Selecione um usuário para excluir.")
             return
 
-        if not messagebox.askyesno("Confirmação", f"Deseja realmente excluir o usuário '{usucod}'?"):
+        confirmar = messagebox.askyesno(
+            "Confirmação de Exclusão",
+            f"Deseja realmente confirmar a exclusão do usuário '{usucod}'?",
+        )
+        if not confirmar:
             return
 
         res = self.service.excluir_usuario(usucod)
@@ -480,7 +557,15 @@ class UsuariosView(ttk.Frame):
         if not usucod or not sel:
             messagebox.showwarning("Aviso", "Selecione um usuário e um sistema para vincular.")
             return
-        cod_sis = sel.split(" - ")[0]
+        cod_sis = sel.split(" - ")[0].strip()
+
+        confirmar = messagebox.askyesno(
+            "Confirmação de Inclusão",
+            f"Deseja realmente confirmar a inclusão do vínculo com o sistema '{sel}' para o usuário '{usucod}'?",
+        )
+        if not confirmar:
+            return
+
         res = self.service.vincular_sistema(usucod, cod_sis)
         if res.sucesso:
             self._carregar_sistemas_usuario(usucod)
@@ -493,7 +578,17 @@ class UsuariosView(ttk.Frame):
         if not usucod or not sel:
             messagebox.showwarning("Aviso", "Selecione um sistema da lista para desvincular.")
             return
-        cod_sis = self.tree_sistemas_user.item(sel[0], "values")[0]
+        item_vals = self.tree_sistemas_user.item(sel[0], "values")
+        cod_sis = item_vals[0]
+        desc_sis = item_vals[1] if len(item_vals) > 1 else cod_sis
+
+        confirmar = messagebox.askyesno(
+            "Confirmação de Exclusão",
+            f"Deseja realmente confirmar a exclusão do vínculo com o sistema '{cod_sis} - {desc_sis}' do usuário '{usucod}'?",
+        )
+        if not confirmar:
+            return
+
         res = self.service.desvincular_sistema(usucod, cod_sis)
         if res.sucesso:
             self._carregar_sistemas_usuario(usucod)
@@ -548,6 +643,27 @@ class UsuariosView(ttk.Frame):
     def _salvar_grupo(self):
         cod = self.ent_grp_cod.get().strip()
         desc = self.ent_grp_desc.get().strip()
+        if not cod:
+            messagebox.showwarning("Aviso", "O código do grupo é obrigatório.")
+            return
+        if not desc:
+            messagebox.showwarning("Aviso", "A descrição do grupo é obrigatória.")
+            return
+
+        grupo_existente = self.service.obter_grupo(cod) if self.service else None
+        if grupo_existente:
+            confirmar = messagebox.askyesno(
+                "Confirmação de Alteração",
+                f"Deseja realmente confirmar a alteração do grupo '{cod}' ({desc})?",
+            )
+        else:
+            confirmar = messagebox.askyesno(
+                "Confirmação de Inclusão",
+                f"Deseja realmente confirmar a inclusão do novo grupo '{cod}' ({desc})?",
+            )
+        if not confirmar:
+            return
+
         res = self.service.salvar_grupo(cod, desc)
         if res.sucesso:
             messagebox.showinfo("Sucesso", res.mensagem)
@@ -561,7 +677,7 @@ class UsuariosView(ttk.Frame):
             messagebox.showwarning("Aviso", "Informe o grupo para exclusão.")
             return
 
-        if not messagebox.askyesno("Confirmação", f"Excluir grupo '{cod}' e todos os seus vínculos?"):
+        if not messagebox.askyesno("Confirmação de Exclusão", f"Deseja realmente confirmar a exclusão do grupo '{cod}' e todos os seus vínculos?"):
             return
 
         res = self.service.excluir_grupo(cod)
@@ -578,9 +694,14 @@ class UsuariosView(ttk.Frame):
         if not cod_grupo or not user_sel:
             messagebox.showwarning("Aviso", "Selecione um grupo e um colaborador.")
             return
-        usucod = user_sel.split(" - ")[0]
+        usucod = user_sel.split(" - ")[0].strip()
+
+        if not messagebox.askyesno("Confirmação de Inclusão", f"Deseja realmente confirmar a inclusão do usuário '{user_sel}' no grupo '{cod_grupo}'?"):
+            return
+
         res = self.service.vincular_usuario_grupo(cod_grupo, usucod)
         if res.sucesso:
+            messagebox.showinfo("Sucesso", res.mensagem)
             self._carregar_membros_grupo(cod_grupo)
             self.carregar_grupos()
         else:
@@ -592,9 +713,16 @@ class UsuariosView(ttk.Frame):
         if not cod_grupo or not sel:
             messagebox.showwarning("Aviso", "Selecione um membro para remover.")
             return
-        usucod = self.tree_membros_grupo.item(sel[0], "values")[0]
+        item_vals = self.tree_membros_grupo.item(sel[0], "values")
+        usucod = item_vals[0]
+        nome = item_vals[2] if len(item_vals) > 2 else usucod
+
+        if not messagebox.askyesno("Confirmação de Exclusão", f"Deseja realmente confirmar a exclusão do usuário '{usucod} - {nome}' do grupo '{cod_grupo}'?"):
+            return
+
         res = self.service.desvincular_usuario_grupo(cod_grupo, usucod)
         if res.sucesso:
+            messagebox.showinfo("Sucesso", res.mensagem)
             self._carregar_membros_grupo(cod_grupo)
             self.carregar_grupos()
         else:
@@ -640,7 +768,12 @@ class UsuariosView(ttk.Frame):
         if not sel:
             messagebox.showwarning("Aviso", "Selecione um recurso da lista.")
             return
-        cod_obj = self.tree_perfis.item(sel[0], "values")[0]
+        item_vals = self.tree_perfis.item(sel[0], "values")
+        cod_obj = item_vals[0]
+        nome_tela = item_vals[2] if len(item_vals) > 2 else cod_obj
+        acao = "liberação" if liberado else "bloqueio"
+        if not messagebox.askyesno("Confirmação de Alteração", f"Deseja realmente confirmar o {acao} de acesso ao recurso '{nome_tela}'?"):
+            return
         self._atualizar_permissao_objeto(cod_obj, liberado)
 
     def _set_permissao_todos(self, liberado: bool):
@@ -649,6 +782,9 @@ class UsuariosView(ttk.Frame):
             messagebox.showwarning("Aviso", "Selecione um grupo de segurança primeiro.")
             return
         cod_grupo = grp_sel.split(" - ")[0]
+        acao = "liberação" if liberado else "bloqueio"
+        if not messagebox.askyesno("Confirmação de Alteração", f"Deseja realmente confirmar o {acao} em lote para todos os recursos listados do grupo '{grp_sel}'?"):
+            return
 
         for item in self.tree_perfis.get_children():
             vals = self.tree_perfis.item(item, "values")

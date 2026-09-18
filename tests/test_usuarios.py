@@ -139,6 +139,7 @@ class TestUsuariosRepositorySQLite(unittest.TestCase):
         cur.execute("INSERT INTO USER_geoapolo_empresas VALUES ('EMP01', 'SEDE PRINCIPAL')")
         cur.execute("INSERT INTO USER_geoapolo_departamentos VALUES ('DEP01', 'TECNOLOGIA', 'EMP01', 'S')")
         cur.execute("INSERT INTO USER_geoapolo_departamentos VALUES ('DEP02', 'FINANCEIRO', 'EMP01', 'S')")
+        cur.execute("INSERT INTO USER_geoapolo_departamentos VALUES ('DEP03', 'COMERCIAL', 'EMP01', 'A')")
 
         # Usuários
         cur.execute("""
@@ -231,8 +232,17 @@ class TestUsuariosRepositorySQLite(unittest.TestCase):
 
     def test_departamentos_e_sistemas(self):
         deptos = self.repo.listar_departamentos()
-        self.assertEqual(len(deptos), 2)
+        self.assertEqual(len(deptos), 3)
 
+    def test_obter_grupo_repo(self):
+        g = self.repo.obter_grupo("GRP01")
+        self.assertIsNotNone(g)
+        self.assertEqual(g.descricao, "ADMINISTRADORES")
+
+        g_inex = self.repo.obter_grupo("INEXISTENTE")
+        self.assertIsNone(g_inex)
+
+    def test_sistemas_e_vinculos(self):
         sistemas = self.repo.listar_sistemas()
         self.assertEqual(len(sistemas), 2)
 

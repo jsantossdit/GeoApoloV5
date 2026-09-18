@@ -8,9 +8,22 @@ Preserva rigorosamente:
 - Chamada de Stored Procedure nativa User_geraocorrencia_projetosv2 com parâmetros vinculados
 """
 
+import os
+import sys
+from pathlib import Path
+
+# Garante que a raiz do projeto esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 import logging
 from typing import List, Dict, Any, Optional
-from entidades.models import EntidadeFiltro, CredencialAlvo
+
+try:
+    from entidades.models import EntidadeFiltro, CredencialAlvo
+except (ImportError, ModuleNotFoundError):
+    from models import EntidadeFiltro, CredencialAlvo
 
 logger = logging.getLogger(__name__)
 

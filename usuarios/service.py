@@ -3,17 +3,37 @@ Serviço de regras de negócio para Gestão de Usuários, Grupos e Perfis de Ace
 GeoApolo V5
 """
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 from typing import List, Optional
-from usuarios.models import (
-    UsuarioDTO,
-    DepartamentoDTO,
-    SistemaDTO,
-    GrupoUsuarioDTO,
-    VinculoGrupoUsuarioDTO,
-    PerfilAcessoItemDTO,
-    ResultadoOperacaoUsuario,
-)
-from usuarios.repository import UsuariosRepository
+try:
+    from usuarios.models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        PerfilAcessoItemDTO,
+        ResultadoOperacaoUsuario,
+    )
+    from usuarios.repository import UsuariosRepository
+except (ImportError, ModuleNotFoundError):
+    from models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        PerfilAcessoItemDTO,
+        ResultadoOperacaoUsuario,
+    )
+    from repository import UsuariosRepository
 
 
 class UsuariosService:
@@ -119,6 +139,11 @@ class UsuariosService:
 
     def listar_grupos(self) -> List[GrupoUsuarioDTO]:
         return self._repo.listar_grupos()
+
+    def obter_grupo(self, codigo_grupo: str) -> Optional[GrupoUsuarioDTO]:
+        if not codigo_grupo or not codigo_grupo.strip():
+            return None
+        return self._repo.obter_grupo(codigo_grupo.strip().upper())
 
     def salvar_grupo(self, codigo_grupo: str, descricao: str) -> ResultadoOperacaoUsuario:
         if not codigo_grupo or not codigo_grupo.strip():

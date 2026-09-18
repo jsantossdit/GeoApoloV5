@@ -38,15 +38,22 @@ class ConfigManager:
         return {}
 
 class DatabaseConfigForm:
-    def __init__(self):
-        self.root = tk.Tk()
+    def __init__(self, parent=None):
+        self.parent = parent
+        if parent is not None:
+            self.root = tk.Toplevel(parent)
+        else:
+            self.root = tk.Tk()
         self.root.title("Configuração do Banco de Dados")
-        self.root.geometry("600x500")
+        self.root.geometry("600x560")
         self.root.resizable(False, False)
         
         # Mantém a janela sempre na frente e com foco
         self.root.attributes('-topmost', True)
         self.root.focus_force()
+        
+        self.salvo = False
+        self.root.protocol("WM_DELETE_WINDOW", self.cancelar)
         
         # Configurações de porta padrão por banco
         self.default_ports = {
@@ -126,6 +133,14 @@ class DatabaseConfigForm:
         self.porta_combo.bind('<Return>', self.on_porta_enter)
         self.porta_combo.bind('<Tab>', self.on_porta_enter)
         
+        # Campo Nome do Banco de Dados
+        ttk.Label(main_frame, text="Nome do Banco de Dados (Catálogo):").pack(anchor="w", pady=(10, 5))
+        self.banco_var = tk.StringVar(value="RCC")
+        self.banco_entry = ttk.Entry(main_frame, textvariable=self.banco_var, width=40)
+        self.banco_entry.pack(pady=(0, 10), fill="x")
+        self.banco_entry.bind('<Return>', self.on_banco_enter)
+        self.banco_entry.bind('<Tab>', self.on_banco_enter)
+        
         # Campo Usuário
         ttk.Label(main_frame, text="Usuário SA do Banco:").pack(anchor="w", pady=(10, 5))
         self.usuario_var = tk.StringVar()
@@ -204,6 +219,17 @@ class DatabaseConfigForm:
             self.porta_combo.focus()
             return "break"
         
+        self.banco_entry.focus()
+        return "break"
+    
+    def on_banco_enter(self, event=None):
+        """Evento quando pressiona Enter/Tab no campo banco de dados"""
+        if self.db_type_var.get() != "SQLite" and not self.banco_var.get().strip():
+            messagebox.showwarning("Campo Obrigatório", 
+                                 "O campo 'Nome do Banco de Dados' é obrigatório!")
+            self.banco_entry.focus()
+            return "break"
+        
         self.usuario_entry.focus()
         return "break"
     
@@ -249,6 +275,11 @@ class DatabaseConfigForm:
             self.porta_combo.focus()
             return
             
+        if self.db_type_var.get() != "SQLite" and not self.banco_var.get().strip():
+            messagebox.showwarning("Atenção", "O nome do banco de dados é obrigatório!")
+            self.banco_entry.focus()
+            return
+            
         if not self.usuario_var.get().strip():
             messagebox.showwarning("Atenção", "O usuário é obrigatório!")
             self.usuario_entry.focus()
@@ -266,19 +297,22 @@ class DatabaseConfigForm:
                 self.senha_var.get()
             )
             
-            # Salvar configurações gerais em arquivo
+            # Salvar configurações gerais em arquivo (nome do banco nunca é fixo)
             settings = {
                 "db_type": self.db_type_var.get(),
                 "endereco": self.endereco_var.get(),
-                "porta": self.porta_var.get() if self.db_type_var.get() != "SQLite" else ""
+                "porta": self.porta_var.get() if self.db_type_var.get() != "SQLite" else "",
+                "banco": self.banco_var.get().strip() if self.db_type_var.get() != "SQLite" else ""
             }
             
             self.config_manager.save_settings(settings)
             
+            self.salvo = True
             messagebox.showinfo("Sucesso", "Configurações salvas com sucesso!")
             self.root.destroy()
             
         except Exception as e:
+            self.salvo = False
             messagebox.showerror("Erro", f"Erro ao salvar configurações: {str(e)}")
     
     def load_existing_config(self):
@@ -289,6 +323,7 @@ class DatabaseConfigForm:
                 self.db_type_var.set(settings.get("db_type", ""))
                 self.endereco_var.set(settings.get("endereco", ""))
                 self.porta_var.set(settings.get("porta", ""))
+                self.banco_var.set(settings.get("banco", "RCC"))
             
             credentials = self.config_manager.get_db_credentials()
             if credentials.get("user"):
@@ -300,12 +335,16 @@ class DatabaseConfigForm:
             print(f"Aviso: Não foi possível carregar configurações existentes: {e}")
     
     def cancelar(self):
-        """Fecha o programa"""
+        """Fecha o formulário sem salvar"""
+        self.salvo = False
         self.root.destroy()
     
     def run(self):
         """Executa o formulário"""
-        self.root.mainloop()
+        if isinstance(self.root, tk.Tk):
+            self.root.mainloop()
+        else:
+            self.root.wait_window()
 
 # Executar o formulário
 if __name__ == "__main__":

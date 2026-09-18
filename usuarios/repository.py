@@ -4,16 +4,35 @@ GeoApolo V5
 Compatível com SQL Server nativo (WITH NOLOCK) e SQLite em memória.
 """
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 from typing import List, Optional
-from usuarios.models import (
-    UsuarioDTO,
-    DepartamentoDTO,
-    SistemaDTO,
-    GrupoUsuarioDTO,
-    VinculoGrupoUsuarioDTO,
-    ObjetoAcessoDTO,
-    PerfilAcessoItemDTO,
-)
+try:
+    from usuarios.models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        ObjetoAcessoDTO,
+        PerfilAcessoItemDTO,
+    )
+except (ImportError, ModuleNotFoundError):
+    from models import (
+        UsuarioDTO,
+        DepartamentoDTO,
+        SistemaDTO,
+        GrupoUsuarioDTO,
+        VinculoGrupoUsuarioDTO,
+        ObjetoAcessoDTO,
+        PerfilAcessoItemDTO,
+    )
 
 
 class UsuariosRepository:
@@ -182,7 +201,7 @@ class UsuariosRepository:
                    COALESCE(uge.empnome, '') AS empnome, ugd.flagativo
             FROM USER_geoapolo_departamentos ugd {nolock}
             LEFT JOIN USER_geoapolo_empresas uge {nolock} ON ugd.empcod = uge.empcod
-            WHERE ugd.flagativo = 'S'
+            WHERE (ugd.flagativo IN ('A', 'S') OR ugd.flagativo IS NULL OR ugd.flagativo = '')
         """
         params = []
         if empcod.strip():
@@ -193,11 +212,11 @@ class UsuariosRepository:
         cur.execute(sql, params)
         return [
             DepartamentoDTO(
-                codigo_departamento=str(r[0]),
-                nome_departamento=str(r[1]),
-                empcod=str(r[2] or ""),
-                empnome=str(r[3] or ""),
-                flagativo=str(r[4] or "S"),
+                codigo_departamento=str(r[0]).strip(),
+                nome_departamento=str(r[1] or "").strip(),
+                empcod=str(r[2] or "").strip(),
+                empnome=str(r[3] or "").strip(),
+                flagativo=str(r[4] or "A").strip().upper(),
             )
             for r in cur.fetchall()
         ]
@@ -283,6 +302,19 @@ class UsuariosRepository:
             )
             for r in cur.fetchall()
         ]
+
+    def obter_grupo(self, codigo_grupo: str) -> Optional[GrupoUsuarioDTO]:
+        """Localiza um grupo pelo seu código."""
+        cur = self.conn.cursor()
+        nolock = self._nolock()
+        cur.execute(
+            f"SELECT codigo_grupo, descricao FROM USER_geoapolo_grupo {nolock} WHERE codigo_grupo = ?",
+            [codigo_grupo],
+        )
+        r = cur.fetchone()
+        if not r:
+            return None
+        return GrupoUsuarioDTO(codigo_grupo=str(r[0]), descricao=str(r[1]))
 
     def salvar_grupo(self, codigo_grupo: str, descricao: str) -> bool:
         """Cria ou atualiza grupo de usuários."""

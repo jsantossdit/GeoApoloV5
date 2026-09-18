@@ -51,8 +51,8 @@ class AutenticacaoRepository:
             "login": str(r[1] or "").strip(),
             "nome_completo": str(r[2] or "").strip(),
             "flagativo": str(r[3] or "A").strip().upper(),
-            "senha": str(r[4] or "").strip(),
-            "senha_alvo": str(r[5] or "").strip(),
+            "senha": str(r[4] or ""),
+            "senha_alvo": str(r[5] or ""),
         }
 
     def listar_empresas_ativas(self) -> List[dict]:

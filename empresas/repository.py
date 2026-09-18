@@ -4,8 +4,19 @@ GeoApolo V5
 Compatível com SQL Server nativo (WITH NOLOCK) e SQLite em memória.
 """
 
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 from typing import List, Optional
-from empresas.models import EmpresaDTO, ResultadoEmpresaDTO
+try:
+    from empresas.models import EmpresaDTO, ResultadoEmpresaDTO
+except (ImportError, ModuleNotFoundError):
+    from models import EmpresaDTO, ResultadoEmpresaDTO
 
 
 class EmpresasRepository:

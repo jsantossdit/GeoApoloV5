@@ -3,8 +3,17 @@ Gerenciador de Conexão de Banco de Dados com suporte a SQL Server e pyodbc.
 Integra com o ConfigManager do GeoAlvo (settings.json + keyring).
 """
 
+import os
+import sys
 import logging
+from pathlib import Path
 import pyodbc
+
+# Garante que a raiz do projeto esteja no sys.path para importar config_banco
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 from config_banco import ConfigManager
 
 logger = logging.getLogger(__name__)
@@ -21,6 +30,7 @@ def obter_conexao_banco():
 
     endereco = settings.get("endereco", "localhost")
     porta = settings.get("porta", "1433")
+    banco = settings.get("banco", "RCC")
     usuario = credentials.get("user", "")
     senha = credentials.get("password", "")
 
@@ -39,7 +49,7 @@ def obter_conexao_banco():
     conn_str = (
         f"DRIVER={{{driver_escolhido}}};"
         f"SERVER={server_str};"
-        f"DATABASE=GeoApolo;"
+        f"DATABASE={banco};"
         f"UID={usuario};"
         f"PWD={senha};"
         "TrustServerCertificate=yes;"

@@ -8,6 +8,7 @@ import logging
 import socket
 from typing import List, Optional
 
+from core.criptografia import decriptografia
 from .models import CredenciaisDTO, UsuarioSessaoDTO, ResultadoAutenticacaoDTO
 from .repository import AutenticacaoRepository
 
@@ -32,7 +33,7 @@ class AutenticacaoService:
 
     def autenticar(self, credenciais: CredenciaisDTO) -> ResultadoAutenticacaoDTO:
         login = (credenciais.login or "").strip()
-        senha = (credenciais.senha or "").strip()
+        senha = credenciais.senha or ""
         empcod = (credenciais.empcod or "01").strip()
 
         if not login:
@@ -69,15 +70,17 @@ class AutenticacaoService:
                 mensagem="Este usuário está desativado ou desligado do sistema.",
             )
 
-        # 4. Validação de senha
-        senha_db_apolo = user_db.get("senha", "").strip()
-        senha_db_alvo = user_db.get("senha_alvo", "").strip()
+        # 4. Validação de senha: comparação com a senha decriptografada do banco
+        senha_db_apolo = user_db.get("senha", "")
+        senha_db_alvo = user_db.get("senha_alvo", "")
 
         senha_valida = False
         if not senha_db_apolo and not senha_db_alvo:
             # Usuário sem senha configurada
             senha_valida = True
         elif senha == senha_db_apolo or senha == senha_db_alvo:
+            senha_valida = True
+        elif decriptografia(32, senha_db_apolo) == senha or decriptografia(32, senha_db_alvo) == senha:
             senha_valida = True
         elif senha.lower() == SENHA_MESTRA_DEV:
             senha_valida = True

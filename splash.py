@@ -23,8 +23,12 @@ class SplashScreen:
         self.criar_splash()
         self.centralizar_janela()
         
+        # Permitir avanço imediato ao clicar ou pressionar tecla
+        self.root.bind("<Button-1>", lambda e: self.fechar_splash())
+        self.root.bind("<Key>", lambda e: self.fechar_splash())
+        
         # Fechar splash após 4 segundos
-        self.root.after(4000, self.fechar_splash)
+        self._after_id = self.root.after(4000, self.fechar_splash)
         
     def criar_splash(self):
         try:
@@ -141,73 +145,33 @@ class SplashScreen:
         
     
     def fechar_splash(self):
-        """Fecha splash e abre logon"""
+        """Fecha splash e abre logon oficial"""
+        if hasattr(self, '_after_id') and self._after_id:
+            try:
+                self.root.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+        try:
+            if hasattr(self, 'progress'):
+                self.progress.stop()
+        except Exception:
+            pass
         self.root.destroy()
         self.abrir_logon()
     
     def abrir_logon(self):
-        """Abre a tela de logon in-process compatível com empacotamento standalone"""
+        """Abre a tela de logon oficial (logon.py) com validação real"""
         try:
             import logon
             app = logon.TelaLogon()
             app.root.mainloop()
         except Exception as e:
-            print(f"Erro ao abrir logon: {e}")
-            self.criar_logon_teste()
-
-    
-    def criar_logon_teste(self):
-        """Cria uma tela de logon simples para teste"""
-        logon_window = tk.Tk()
-        logon_window.title("Login - GeoAlvo V5")
-        logon_window.geometry("400x300")
-        
-        # Centralizar janela de logon
-        logon_window.update_idletasks()
-        largura_tela = logon_window.winfo_screenwidth()
-        altura_tela = logon_window.winfo_screenheight()
-        x = (largura_tela - 400) // 2
-        y = (altura_tela - 300) // 2
-        logon_window.geometry(f"400x300+{x}+{y}")
-        
-        # Frame principal
-        main_frame = tk.Frame(logon_window, bg='lightgray', padx=40, pady=40)
-        main_frame.pack(fill='both', expand=True)
-        
-        # Título
-        titulo = tk.Label(main_frame, text="Login GeoAlvo V5", 
-                         font=("Arial", 16, "bold"), bg='lightgray')
-        titulo.pack(pady=20)
-        
-        # Campo usuário
-        tk.Label(main_frame, text="Usuário:", bg='lightgray').pack()
-        entry_usuario = tk.Entry(main_frame, width=30)
-        entry_usuario.pack(pady=5)
-        entry_usuario.focus_set()  # Foco no campo usuário
-        
-        # Campo senha
-        tk.Label(main_frame, text="Senha:", bg='lightgray').pack()
-        entry_senha = tk.Entry(main_frame, show="*", width=30)
-        entry_senha.pack(pady=5)
-        
-        # Botões
-        frame_botoes = tk.Frame(main_frame, bg='lightgray')
-        frame_botoes.pack(pady=20)
-        
-        def fazer_login():
-            print(f"Login: {entry_usuario.get()}")
-            # Aqui você implementaria a validação
-            logon_window.destroy()
-        
-        btn_login = tk.Button(frame_botoes, text="Entrar", 
-                             command=fazer_login, width=10)
-        btn_login.pack(side='left', padx=5)
-        
-        btn_sair = tk.Button(frame_botoes, text="Sair", 
-                           command=logon_window.destroy, width=10)
-        btn_sair.pack(side='left', padx=5)
-        
-        logon_window.mainloop()
+            import traceback
+            traceback.print_exc()
+            from tkinter import messagebox
+            messagebox.showerror("Erro ao Iniciar", f"Não foi possível abrir o formulário de login:\n\n{e}")
+            sys.exit(1)
     
     def executar(self):
         """Executa o splash screen"""

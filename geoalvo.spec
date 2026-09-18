@@ -19,6 +19,7 @@ hidden_imports = [
     'core.viacep',
     'core.email_service',
     'core.recursos',
+    'core.criptografia',
     'cores',
     'crm',
     'departamentos',
@@ -41,6 +42,7 @@ hidden_imports = [
     'toolbar_geoalvo',
     'logon',
     'splash',
+    'geoalvo',
     'PIL',
     'PIL.Image',
     'PIL.ImageTk',
@@ -59,7 +61,7 @@ datas = [
 ]
 
 a = Analysis(
-    ['geoalvo.py'],
+    ['splash.py'],
     pathex=['.'],
     binaries=[],
     datas=datas,
@@ -97,4 +99,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='GeoApolo_Icon.ico',
 )

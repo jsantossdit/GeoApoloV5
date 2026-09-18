@@ -7,19 +7,39 @@ Correspondente e evolução de unt_entidades.pas (Tfrmentidades).
 import tkinter as tk
 from tkinter import ttk, messagebox
 import os
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent.parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 import logging
 from typing import Optional, List, Dict, Any
 
-from entidades.models import (
-    EntidadeFiltro,
-    ItemComparacao,
-    DecisaoLinha,
-    ResultadoOperacao,
-)
-from entidades.repository import EntidadeRepository
-from entidades.service import EntidadeService
-from entidades.api_client import AlvoAPIClient
-from entidades.database import obter_conexao_banco
+try:
+    from entidades.models import (
+        EntidadeFiltro,
+        ItemComparacao,
+        DecisaoLinha,
+        ResultadoOperacao,
+    )
+    from entidades.repository import EntidadeRepository
+    from entidades.service import EntidadeService
+    from entidades.api_client import AlvoAPIClient
+    from entidades.database import obter_conexao_banco
+except (ImportError, ModuleNotFoundError):
+    from models import (
+        EntidadeFiltro,
+        ItemComparacao,
+        DecisaoLinha,
+        ResultadoOperacao,
+    )
+    from repository import EntidadeRepository
+    from service import EntidadeService
+    from api_client import AlvoAPIClient
+    from database import obter_conexao_banco
 
 logger = logging.getLogger(__name__)
 

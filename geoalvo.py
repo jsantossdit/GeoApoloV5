@@ -1,4 +1,12 @@
 import os
+import sys
+from pathlib import Path
+
+# Garante que o diretório raiz do projeto esteja no sys.path
+_raiz_projeto = str(Path(__file__).resolve().parent)
+if _raiz_projeto not in sys.path:
+    sys.path.insert(0, _raiz_projeto)
+
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
@@ -331,12 +339,33 @@ def atualizar_relogio(label_relogio):
 def main():
     global root
     root = tk.Tk()
-    root.title("GeoAlvo - Sistema de Gestão Integrada v5.0")
+    
+    # Atualiza o contexto corporativo e o título da janela principal
+    try:
+        from logon import sessao_usuario_atual
+        cod_emp = sessao_usuario_atual.get("codigo_empresa", "")
+        nome_emp = sessao_usuario_atual.get("nome_empresa", "")
+        root.empresa_ativa = cod_emp or "1.01"
+        root.nome_empresa_ativa = nome_emp
+        if cod_emp and nome_emp:
+            root.title(f"GeoAlvo V5.0 - {cod_emp} - {nome_emp}")
+        else:
+            root.title("GeoAlvo - Sistema de Gestão Integrada v5.0")
+    except Exception:
+        root.title("GeoAlvo - Sistema de Gestão Integrada v5.0")
     
     largura_tela = root.winfo_screenwidth()
     altura_tela = root.winfo_screenheight() - 40
     root.geometry(f"{largura_tela}x{altura_tela}+0+0")
     root.state('zoomed') # maximiza a janela
+
+    # Configura ícone oficial da aplicação se disponível
+    caminho_icone = obter_caminho_recurso(os.path.join("Imagens", "GeoApolo_Icon.ico"))
+    if os.path.exists(caminho_icone):
+        try:
+            root.iconbitmap(caminho_icone)
+        except Exception:
+            pass
 
     # =============================================
     # Barra de menu (PRIMEIRO)

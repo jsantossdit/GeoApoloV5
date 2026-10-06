@@ -1,0 +1,11 @@
+no menu principal, cadastros estoque, ao cadastrar um produto eu não tenho nada que me permita vincular uma marca ao produto ou detalhes de suas cores, mas 
+há cadastros para isso de forma individual, importante padronizar no sistema que além do tab para passar de um campo para o outro poderemos usar também a tecla
+enter, ao digitar uma marca no cadastro de produto, caso ela não exista, deve permitir incluir e já atribuir um código a ela, desde que a descrição não seja igual
+além de todos os campos com texto deve ser formatados com letras em maiúsculo.
+no menu principal, cadastros, estoque, em grupos de produtos, alinhar os códigos estruturados a esquerda para dar a visão de arvore.
+no menu principal, cadastros, estoque, marcas, nenhuma opçõ é aberta, verificar e usar o formulário delphi para disponibilizar a função. 
+no menu geoalvo criar um menu de nome Estoque e nele algumas opções, dentre elas Requisições de Materiais como submenu de requisições, teremos atendimento, cancelamento
+devolução de requisições, Movimentação de Estoque, movimentações serão alimentadas em grid a partir do atendimento de requisições de materiais, mas também terá
+opção para movimentações de entrada, quando alguma compra chegar, para saída, quando for atendimento direto sem passar por requisição, geralmente aplicadas a produtos
+que não controlam estoque, Consultas, esse ultimo terá, algumas opções como Consulta Ficha Estoque, Consulta Saldo Produto, Consulta Requisições de Materiais, utilizar
+os padrões de mercado para implementar esse controle de estoque com visual moderno tanto no menu cadastros, estoque quanto para o menu geoalvo, estoque.

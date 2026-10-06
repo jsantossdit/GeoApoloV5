@@ -1,0 +1,29 @@
+na tela principal do cadastro de entidades devemos ter, Código Entidade (geoentcod), tipo de tratamento, nome, nome fantasia, cep (integrado a rotina que ao preencher e passar para o próximo campo, deve consumir a api do cep fácil para consulta), logradouro, endereço, numero, complementar, bairro, cidade (onde traz o código da cidade, tem também um botão ao lado para buscar a cidade via formulário de consulta, uma vez encontrado e selecionada, traz o nome completo dela preenchendo o nome da cidade, o campo uf vem da mesma seleção, ao lado o campo caixa postal, Gênero (sexo), a combo de falecido com sim ou não, o campo local de referência para endereço, tipo de identificação da pessoa com uma combo também com Física ou Jurídica, o estado civil que pode ser lido do formulário delphi, a data de nascimento formatada como dd/mm/aaa que deve ser digitada direto sem afetar as barras de formatação, o mesmo para data de cadastro que se for uma inclusão deve ser preenchida com a data do dia, senão traz do banco o resultado, em seguida a combo de escolaridade com o conteúdo resgatado do formulário delphi, por fim na aba principal o campo ocupação (cargo) com botão para busca e uma label onde deverá trazer o nome do cargo e na edit o código.
+
+Passando para a aba complementar, teremos outro grupo de subabas conforme descrito abaixo:
+Dados pessoais
+Nome do Pai, nome da mae, reside com  e um radio button para possui filhos (sim ou não), todos os campos textos deve ser formatados para aceitar somente maiúsculo.
+
+Financeiro
+Em financeiro, uma edit para guardar o código do tipo de cobrança (tipocobcod) com um botão lupa ao lado para busca dos diversos tipos de cobrança, uma vez selecionados
+traz para a edit o código e na label após o botão traz o nome do tipo de cobrança (tipocobnome), abaixo uma edit para o código do banco com um botão de busca e uma label para o nome do banco, repetir o mesmo para agência com os mesmos recursos e uma edit para o número da conta corrente, ao lado deve colocar o campo Dia Deb. Automático,
+que deve ser preenchido se já vier do banco ou se a modalidade (comparar o tipo cobnome) contiver alguma coisa que relate débito automático, abaixo o campo valor da contribuição, deve conter ao lado dois botões um com o ícone de uma bandeirinha do brasil que sendo padrão padrão para qualquer tipo de valor, outro botão ao lado com uma bandeirinha dos estados unidos que se clicado irá formatar o campo valor como US$ (formato da moeda norte americana), abaixo uma combo flag para Gerar Carnê com conteúdo (sim/não), logo abaixo o campo Diocese com uma edit ao lado um botão de busca e uma label, uma vez digitado o código ou selecionada no form consulta uma diocese ele preenche a label com o nome da diocese, logo abaixo uma outra combo com Sim/Não para a mensagem Recebe Lembrete?
+
+Informações complementares
+nesta subaba temos o primeiro campo uma edit com o nome atividadeeconomica com um botão de busca para a consulta que estiver no frmconsultas3 do delphi com a devida variável de controle e uma label, no form de busca ao selecionar a atividade, deve trazer seu código e preencher a label com o nome da atividade econômica, logo abaixo outra edit (Origem da Entidade) com botão de busca e uma label, onde a consulta pode ser extraída do frmconsultas3 e ao selecionar o registro, traz o código para a edit e o nome da origem para a label, logo ao lado o campo região, seguindo os mesmos princípios da edit anterior, logo abaixo uma edit para o conceito da entidade, campo de texto livre , acima e a direita 2 groupbox com os dizeres sim ou não para Endereço de cobrança o mesmo e endereço de entrega o mesmo, uma vez que responda não devem ser habilitadas outras duas subabas de Endereço de cobrança e endereço de entrega cujo os campos podem ser lidos no formulário frmcadentidade do delphi
+
+Aba - Contatos
+Na versão atual esses dados não foram mostrados, seguem os mesmos dados da aba principal contudo ficam em abas separadas pois quem verá são os supervisores de cada um deles, explicando melhor, por exemplo, se uma entidade tiver sua data de nascimento menor que 18 anos, um contato deve ser cadastrado como responsável pois para doação por boleto não é permitido emitir para menores de 18, quando o cadastro se tratar de um grupo de oração (identificado pela categoria) um coordenador deve ser cadastrado na aba indicando o responsável pelo grupo e neste caso temos dois campos data (que devem seguir a formatação dos demais já citados) marcando o inicio e o final da vigência do mandato do coordenador, mas os campos específicos podem ser lidos do formulário delphi na aba contatos.
+
+Aba - Histórico Entidade
+Nesta aba é bem mais simples, um campo de nome HISTÓRICO (campo memo text) desabilitado na cor cinza que deve carregar o campo enthist que vem do banco de dados, logo abaixo outro campo memo text com o nome "NOVO REGISTRO DE HISTÓRICO" para livre digitação. 
+
+Aba - Documentos da Entidade
+
+aqui nesta aba, como passamos o campo cpfcnpj e rgie para a aba principal, acredito que possa ficar mas sem esses dois documentos principais, caso o usuário deseje registrar uma cnh ou outro documento a aba fica disponível
+
+Aba - Observações
+
+Um campo text de livre digitação para qualquer pendência do cadastro que o impedirá de ir para o alvo.
+
+

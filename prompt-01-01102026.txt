@@ -1,0 +1,7 @@
+no formulário de login, uma vez validado o usuário se a sua senha retornar null permitir cadastrar uma nova senha, mas antes criptografar ela conforme o 
+sistema, caso não encontre o usuário, antes de chegar na senha já pode dar mensagem que o usuário não está cadastrado, quando trocar a base de dados, 
+ao pesquisar o usuário se nao encontre, permita que o admin seja validado e use a senha netscape para permitir o acesso de configuração, contudo no código
+para proteger questões e segurança, se for deixar essa senha no código, faça a criptografia dela com os metodos disponíveis no python
+
+no formulario de login é importante aumentar o timeout da conexão para bases locais, no formulário de configuração do banco, inserir um campo para que possa
+ler o formulário atual trazer o numero e permitir alterar

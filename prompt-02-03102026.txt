@@ -1,0 +1,63 @@
+no formulário de cadastro de usuários, ao tentar salvar um usuários tá dando erro ao converter nvarchar para numeric, na mesma tela, quando clicar em novo, posicionar
+o cursor no primeiro campo da tela, 
+
+na base nova não estão aparecendo todos os objetos, um dos que não vi foi o menu principal e as demais opções de menus, também a barra de ferramentas
+
+No formulário de entidades, se teclar insert ou no botão novo, deve chamar o formulário de cadastro de entidades para a inclusão de um novo registro, o mesmo
+deve ser salvo na base user_geoapolo_entidade e correspondentes
+
+NO formulário e cadastro de entidades, padronizar todos os campos textos como maiúsculos, na combo de tipo de tratamento, trazer todos os registros, permitir passar
+de um campo para o outro teclando enter
+
+no formulário de cadastros de categoria, implementar a possibilidade de teclar insert para inserir uma nova categoria, disponibilize um botão Novo com a mesma
+função, para isso utilizar o formulário de cadastro do delphi, pode chamá-lo e refatorar de acordo com esse novo projeto.
+
+Verificar no delphi se temos um formulário para o cadastro de cargos, caso exista, favor refatorar e disponibilizar dentro do menu cadastros \ entidades.
+
+no menu geoalvo de estoque, movimentação de estoque, nas opções de atendimento de requisição e nas movimentações de saida, a hora que for atender uma requisição
+ou saida, quando o produto tiver controle de lote e a data de vencimento do lote estiver entre 10 a 30 dias emitir alerta amarelo de lote perto do vencimento,
+se for entre 5 a 10 dias, alerta vermelho de lote perto do vencimento, de 0 a 5 dias, alerta roxo e impedir o atendimento da requisição ou saida do materia
+
+no formulário de nova requisição de material, quando teclo f4 para buscar novo produto ou clico no botão, não está trazendo nada
+
+no menu cadastro \ estoque \ produtos, está dando objeto inválido para a tabela user_geoapolo_produtos, vou criá-la manualmente no banco de dados, mas na hora de 
+agir, favor checar se está ok, fazer o mesmo para user_produto_cores e demais tabelas do estoque, alarmar o que estiver faltando
+
+no formulário de criação de lotes, ao clicar para buscar o fornecedor, não trouxe nenhuma entidade, caso a tabela esteja vazia, informar que não há registros na 
+tabela, no mesmo formulário, na hora de vincular o centro de custo daquele lote, remover, pois um lote não necessariamente precisa estar vinculado a um centro de
+custo, mas teremos esse vinculo na hora de fazer a movimentação de estoque, no formulário de saida direta do estoque, o campo centro de custo está amarrado ao lote,
+preciso ter o campo do centro de custo e o campo do lote vinculado a aquele produto, para assim aplicar os controles de validação, ao registrar a movimentação de
+saída, deu erro de lbl_desc_p is not defined, precisamos acertar isso, também nos formulários do sistema, onde ouver o campo empresa, trazer o código da empresa
+que foi selecionada no momento do login
+
+quando fiz uma movimentação de entrada do produto 30 pão de hamburguer, ao fazer uma requisição de material ou uma saída direta no estoque, o saldo do produto
+não estava atualizado, sempre que fizer uma movimentação de entrada ele precisa atualizar o saldo, o mesmo deve ser feito quando fizer uma saída direta via movimento
+de estoque, também ao atender uma requisição de material deve ser gerada a movimentação de saída e a consequente atualização do saldo do produto, bem como na 
+hora de atender a requisição, deve haver a validação do lote conforme os alertas já especificados.
+
+---- 20h
+no cadastro de produtos, remover o campo do código de lote, pois no cadastro de produto não há razão para isso, o lote sempre mudará, nesse caso o código do lote
+deverá ser criado e mantido na movimentação de estoque
+
+no formulário de atendimento de requisições, o botão f7 para atender toda a requisição não está funcionando, nesse caso deve atender os itens e verificar, saldo 
+assim como a validade do lote informado para atedimento, o atendimento individual também não está funcionando, abre o formulário mas ele fica em branco, reativar
+a opção 
+
+foi criada a tabela: 
+CREATE TABLE user_geoapolo_saldoestqdata
+(
+	prodcod numeric(8,0) NOT NULL,
+	data_saldo date null,
+	saldo_do_dia numeric(14,6),
+	CONSTRAINT pk_prodssaldoestqdata PRIMARY KEY (prodcod, data_saldo)
+)
+
+para que ao fazer movimentações de entrada o saldo será adicionado conforme a data, fazendo movimentações de saída o saldo será reduzido
+
+--- APÓS AS 23:59
+verificar na estrutura delphi e habilitar a classificação de bens para serem cadastradas, após o cadastro disponibilizar o conteúdo nos combos pelo módulo de 
+ativo fixo, no formulário, padronizar todos os campos em caixa alta e habilitar o enter além do tab para passar de um campo para o outro
+
+no formulário de cadastro de ativo fixo, a combo de marca de produtos está vazia, mas temos na tabela de marcas um grande número de registros, precisamos
+preencher a combo e permitir também que se digite e caso a marca não exista, pode fazer o cadastro a partir da digitação na combo, na combo de status, padronizar
+o status em ativo e baixado.

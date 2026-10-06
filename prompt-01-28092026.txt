@@ -1,0 +1,19 @@
+Em consultas imediatas, temos algumas delas que consultam a base do aplicativo da RCC, assim em configurações de banco de dados, precisamos criar uma aba para salvar 
+configurações do banco mysql do aplicativo, em geoalvo \ integração savic x alvo, como não está dando certo, gostaria que modificasse esse formulário ou criasse um 
+botão para chamar uma outra rotina onde eu consiga ver a esquerda os campos do cadastro de grupos de oração e dos coordenadores, devidamente identificados e a direita
+que eu possa escolher dentre os campos de todas as tabelas do cadastro de entidades os campos respectivos para associar um ao outro, isso ficaria salvo como uma
+diretriz para fazer o posterior importe para o cadastro de entidades do geoalvo.
+
+No formulário de entidades, gostaria de criar uma opção para poder fazer filtro com mais de um campo, tendo condições os operadores lógicos e, ou, contém dentre outros
+para poder filtrar todas as entidades que percentem por exemplo a uma categoria de grupo de oração e que não tenham sido exportadas para o alvo (cuja exportação deve
+observar o flag_atualizaapolo ou algo assim e também o campo entcod tem que estar vazio, um vez o filtro funcionando, devemos fazer um botão onde tenha um loop que
+antes de rodar pergunta(Deseja exportar todas as Entidades abaixo para o Alvo ? Sim/Não), uma vez respondido sim, entra no loop e vai chamando a api para cada registro
+e não precisa retornar nenhum resultado na tela, apenas mover o cursor no grid, caso retorne algum erro na exportação, deve ser salvo um arquivo de log no diretório do
+executável mostrando quais entidades não foram exportadas e por qual erro isso não ocorreu, para posterior correção e nota tentativa.
+
+no cadastro de entidades, formulário de entidades, botão exportar para o alvo, quando o genero ou sexo for M de masculino, o tipo de tratamento deve ser Sr. e 
+quando for F de feminino, verifique se o estado civil está preenchido, se tiver e for Casada ou União estável, coloque o tipo de tratamento como Sra. do contrário
+coloque como Srta.
+
+quando clica o botão exportar para o alvo e já tem um entcod preenchido, quando manda manter os dados do geoalvo/geoapolo, ao mandar os dados via api, parece que
+não está atulizando no alvo, precisamos checar o que houve e aplicar uma correção.

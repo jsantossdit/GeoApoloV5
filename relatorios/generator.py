@@ -18,6 +18,40 @@ try:
 except ImportError:
     OPENPYXL_AVAILABLE = False
 
+try:
+    from fpdf import FPDF
+    from fpdf.fonts import FontFace
+    FPDF_AVAILABLE = True
+except ImportError:
+    FPDF_AVAILABLE = False
+
+
+class _PDFRelatorioDocumento(FPDF):
+    """Subclasse customizada do FPDF com cabeçalho corporativo e rodapé paginado."""
+
+    def __init__(self, titulo: str, total_registros: int, orientation: str = "P"):
+        super().__init__(orientation=orientation, unit="mm", format="A4")
+        self.titulo = titulo
+        self.total_registros = total_registros
+        self.set_auto_page_break(auto=True, margin=15)
+
+    def header(self):
+        self.set_font("Helvetica", "B", 12)
+        self.set_text_color(26, 54, 93)  # #1A365D Azul Marinho Corporativo
+        self.cell(0, 6, f"GEOALVO - {self.titulo.upper()}", border=False, new_x="LMARGIN", new_y="NEXT")
+
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(113, 128, 150)
+        dt_str = datetime.now().strftime("%d/%m/%Y às %H:%M:%S")
+        self.cell(0, 4, f"Gerado em: {dt_str} | Total de Registros: {self.total_registros}", border=False, new_x="LMARGIN", new_y="NEXT")
+        self.ln(3)
+
+    def footer(self):
+        self.set_y(-10)
+        self.set_font("Helvetica", "I", 8)
+        self.set_text_color(160, 174, 192)
+        self.cell(0, 6, f"Página {self.page_no()}/{{nb}} - Sistema GeoAlvo V5", align="C")
+
 
 class RelatorioGenerator:
 
@@ -169,4 +203,50 @@ class RelatorioGenerator:
             writer.writeheader()
             writer.writerows(dados)
 
+        return caminho_destino
+
+    @staticmethod
+    def gerar_pdf(dados: List[Dict[str, Any]], titulo: str, caminho_destino: str) -> str:
+        """Gera relatório PDF corporativo usando fpdf2 de forma leve e rápida."""
+        if not FPDF_AVAILABLE:
+            raise RuntimeError("Biblioteca fpdf2 não está instalada no ambiente.")
+
+        # Se houver mais de 5 colunas, adota orientação paisagem para melhor legibilidade
+        colunas = list(dados[0].keys()) if dados else []
+        orientacao = "L" if len(colunas) > 5 else "P"
+
+        pdf = _PDFRelatorioDocumento(titulo=titulo, total_registros=len(dados), orientation=orientacao)
+        pdf.add_page()
+
+        if not dados or not colunas:
+            pdf.set_font("Helvetica", "I", 10)
+            pdf.set_text_color(100, 116, 139)
+            pdf.ln(10)
+            pdf.cell(0, 10, "Nenhum registro encontrado para os filtros selecionados.", align="C")
+            pdf.output(caminho_destino)
+            return caminho_destino
+
+        pdf.set_font("Helvetica", size=8)
+
+        # Configura estilo do cabeçalho da tabela: Azul Marinho Corporativo com texto branco
+        h_style = FontFace(emphasis="B", color=(255, 255, 255), fill_color=(26, 54, 93))
+
+        with pdf.table(headings_style=h_style, line_height=5.5) as table:
+            # Cabeçalho
+            h_row = table.row()
+            for col in colunas:
+                h_row.cell(str(col))
+
+            # Linhas de dados
+            for idx, reg in enumerate(dados):
+                row = table.row()
+                # Alterna cor de fundo para efeito zebra nas linhas pares
+                zebra_bg = (247, 250, 252) if (idx % 2 == 1) else (255, 255, 255)
+                row_style = FontFace(fill_color=zebra_bg)
+                for col in colunas:
+                    val = reg.get(col, "")
+                    val_str = "" if val is None else str(val)
+                    row.cell(val_str, style=row_style)
+
+        pdf.output(caminho_destino)
         return caminho_destino

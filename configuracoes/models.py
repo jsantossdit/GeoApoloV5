@@ -27,6 +27,7 @@ class ConfiguracaoSistemaDTO:
     grupo_software: str = ""
     tempo_maximo_missao: str = "30"
     status_fecha_pic: str = ""
+    permite_estoque_negativo: str = "Não"
 
 
 @dataclass

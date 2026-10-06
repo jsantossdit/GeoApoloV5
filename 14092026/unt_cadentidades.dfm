@@ -15,6 +15,7 @@ object frmcadentidade: Tfrmcadentidade
   Position = poMainFormCenter
   OnActivate = FormActivate
   OnClose = FormClose
+  OnKeyPress = FormKeyPress
   OnKeyUp = FormKeyUp
   OnShow = FormShow
   TextHeight = 13

@@ -44,6 +44,8 @@ type
     procedure gruposenhaMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure gruposenhaEnter(Sender: TObject);
+    procedure cbousuarioDropDown(Sender: TObject);
+    procedure cbousuarioEnter(Sender: TObject);
     procedure btnexecutaClick(Sender: TObject);
     procedure btnvalidarClick(Sender: TObject);
     procedure spbcheckClick(Sender: TObject);
@@ -52,6 +54,7 @@ type
     procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
+    procedure CarregarComboUsuarios;
   public
     { Public declarations }
     validacao,flag:string;
@@ -100,45 +103,54 @@ end;
 
 procedure Tfrmabout.FormActivate(Sender: TObject);
 var
-   strlst:tstringlist;
-   i:integer;
+   strlst: tstringlist;
+   i: integer;
+   bPermitido: Boolean;
 begin
-   strlst:=tstringlist.Create;
-   lblnomecomp.Text := nomecomputador;
-   lblnomecomp.Refresh;
-   lblip.Text := getlocalip;
-   lblip.Refresh;
-   fileverinfo(application.ExeName,strlst);
-   for i:= 0 to strlst.Count -1 do
-   begin
-      memo1.Lines.add(strlst.Strings [i]);
-      memo1.Refresh;
+   strlst := tstringlist.Create;
+   try
+      lblnomecomp.Text := nomecomputador;
+      lblnomecomp.Refresh;
+      lblip.Text := getlocalip;
+      lblip.Refresh;
+      fileverinfo(application.ExeName, strlst);
+      for i := 0 to strlst.Count - 1 do
+      begin
+         memo1.Lines.add(strlst.Strings[i]);
+         memo1.Refresh;
+      end;
+   finally
+      strlst.Free;
    end;
-   if frmlogon.codigousuario = '3' then
-      gruposenha.Visible := true;
+
+   bPermitido := (Trim(frmlogon.codigousuario) = '3') or
+                 (UpperCase(Trim(frmlogon.nomeusuario)) = 'JULIO') or
+                 (UpperCase(Trim(frmlogon.nomeusuario)) = 'ADMIN');
+   gruposenha.Visible := bPermitido;
+   if bPermitido then
+   begin
+      CarregarComboUsuarios;
+      if cbousuario.CanFocus then
+         cbousuario.SetFocus;
+   end;
+
    //
    {busca a chave do periodo e traz para ser decodificada}
-   with modulo_dados,frmabout do
+   with modulo_dados, frmabout do
    begin
-     sql:='SELECT palavra FROM user_geoapolo_dicionario WHERE month(data_inicial) = :datainicial';
-     sql:=sql+' AND year(data_final) = :datafinal';
+     sql := 'SELECT palavra FROM user_geoapolo_dicionario WHERE month(data_inicial) = :datainicial';
+     sql := sql + ' AND year(data_final) = :datafinal';
      fdquerysql4.Close;
      fdquerysql4.SQL.Clear;
      fdquerysql4.SQL.Text := sql;
-     fdquerysql4.ParamByName('datainicial').AsString :=inttostr(monthof(date()));
-     fdquerysql4.ParamByName('datafinal').AsString:=inttostr(yearof(date()));
+     fdquerysql4.ParamByName('datainicial').AsString := inttostr(monthof(date()));
+     fdquerysql4.ParamByName('datafinal').AsString := inttostr(yearof(date()));
      if executaracao(fdquerysql4, fdbanco, true, dtsfdquerysql4) then
         lblchavedoperiodo.Text := fdquerysql4.fieldbyname('palavra').asstring;
    end;
    frmprincipal.libera_validacao := 'ERRO';
    memo1.Lines.add(getbuildinfo);
-   memo1.Lines.add('Usuário Logado .:'+' '+loguser);
-   //
-   if frmlogon.nomeusuario = 'ADMIN' then
-      begin
-         gruposenha.visible := true;
-         cbousuario.setfocus;
-      end;
+   memo1.Lines.add('Usuário Logado .: ' + loguser);
 end;
 
 procedure Tfrmabout.gruposenhaMouseDown(Sender: TObject;
@@ -147,41 +159,105 @@ begin
    gruposenha.Visible := false;
 end;
 
-procedure Tfrmabout.gruposenhaEnter(Sender: TObject);
+procedure Tfrmabout.CarregarComboUsuarios;
+var
+   vLoginAtual: string;
 begin
-   with modulo_dados do
-   begin
-      sql:='SELECT login, senha FROM user_geoapolo_usuarios WHERE login is not null and login <> :loginconteudo ORDER BY nome_completo ASC';
-      fdquerysql.Close;
-      fdquerysql.SQL.Clear;
-      fdquerysql.SQL.Text := sql;
-      fdquerysql.ParamByName('loginconteudo').AsString :='';
-      if executaracao(fdquerysql, fdbanco, true, dtsfdquerysql) then
+   vLoginAtual := cbousuario.Text;
+   cbousuario.Items.BeginUpdate;
+   try
+      cbousuario.Items.Clear;
+      with modulo_dados do
+      begin
+         sql := 'SELECT DISTINCT login FROM user_geoapolo_usuarios ' +
+                'WHERE login IS NOT NULL AND LTRIM(RTRIM(login)) <> ' + QuotedStr('') + ' ' +
+                'ORDER BY login ASC';
+         fdquerysql.Close;
+         fdquerysql.SQL.Clear;
+         fdquerysql.SQL.Text := sql;
+         if executaracao(fdquerysql, fdbanco, false, dtsfdquerysql) then
          begin
             fdquerysql.First;
             while not fdquerysql.Eof do
             begin
-               cbousuario.Items.add(fdquerysql.fieldbyname('login').asstring);
+               cbousuario.Items.Add(Trim(fdquerysql.FieldByName('login').AsString));
                fdquerysql.Next;
             end;
          end;
+      end;
+   finally
+      cbousuario.Items.EndUpdate;
    end;
+
+   if vLoginAtual <> '' then
+      cbousuario.ItemIndex := cbousuario.Items.IndexOf(vLoginAtual);
+   if (cbousuario.ItemIndex = -1) and (cbousuario.Items.Count > 0) then
+      cbousuario.ItemIndex := 0;
+end;
+
+procedure Tfrmabout.cbousuarioDropDown(Sender: TObject);
+begin
+   if cbousuario.Items.Count = 0 then
+      CarregarComboUsuarios;
+end;
+
+procedure Tfrmabout.cbousuarioEnter(Sender: TObject);
+begin
+   if cbousuario.Items.Count = 0 then
+      CarregarComboUsuarios;
+end;
+
+procedure Tfrmabout.gruposenhaEnter(Sender: TObject);
+begin
+   CarregarComboUsuarios;
 end;
 
 procedure Tfrmabout.btnexecutaClick(Sender: TObject);
+var
+   vLogin, vSenhaCrua, vSenhaAlvoCrua: string;
+   vSenhaDec, vSenhaAlvoDec: string;
 begin
+   vLogin := Trim(cbousuario.Text);
+   if vLogin = '' then
+   begin
+      MessageDlg('Selecione um usuário para decriptografar a senha.', mtWarning, [mbOK], 0);
+      if cbousuario.CanFocus then
+         cbousuario.SetFocus;
+      Exit;
+   end;
+
    with modulo_dados do
    begin
-      sql:='SELECT senha FROM user_geoapolo_usuarios WHERE login = :cbousuario';
+      sql := 'SELECT senha, senha_alvo FROM user_geoapolo_usuarios WHERE login = :cbousuario';
       fdquerysql.Close;
       fdquerysql.SQL.Clear;
       fdquerysql.SQL.Text := sql;
-      fdquerysql.ParamByName('cbousuario').AsString :=cbousuario.Text;
-      if executaracao(fdquerysql, fdbanco, true, dtsfdquerysql) then
-         begin
-            lblsenha.Text := decriptografia(32,fdquerysql.fieldbyname('senha').asstring,'aaa');
-            lblsenha.Refresh;
-         end;
+      fdquerysql.ParamByName('cbousuario').AsString := vLogin;
+      if executaracao(fdquerysql, fdbanco, false, dtsfdquerysql) and (not fdquerysql.IsEmpty) then
+      begin
+         vSenhaCrua     := Trim(fdquerysql.FieldByName('senha').AsString);
+         vSenhaAlvoCrua := '';
+         if fdquerysql.FindField('senha_alvo') <> nil then
+            vSenhaAlvoCrua := Trim(fdquerysql.FieldByName('senha_alvo').AsString);
+
+         vSenhaDec := '';
+         if vSenhaCrua <> '' then
+            vSenhaDec := decriptografia(32, vSenhaCrua, '')
+         else if vSenhaAlvoCrua <> '' then
+            vSenhaDec := decriptografia(35, vSenhaAlvoCrua, '');
+
+         if vSenhaDec <> '' then
+            lblsenha.Text := vSenhaDec
+         else
+            lblsenha.Text := '(sem senha cadastrada)';
+
+         lblsenha.Refresh;
+      end
+      else
+      begin
+         lblsenha.Text := '(usuário não encontrado)';
+         lblsenha.Refresh;
+      end;
    end;
 end;
 

@@ -1,0 +1,13 @@
+no formulário de entidades, quando selecionar filtro só pela categoria, filtrar exata a categoria que estiver na combo, não trazer os níveis abaixo, que posterior
+mente poderão ser filtrados
+
+nas rotinas que exportam entidades para o alvo, validar para que quando a sigla do estado seja (RS, SC, PR) buscar no banco a região sul, quando for (SP, MG,RJ,ES) 
+procure no banco na tabela região a região sudeste, quando for (MS, MT, GO,TO, df) procurar pela região centro-oeste, quando for (AM, RO, PA, AC,AP,RR) PARA REGIÃO 
+NORTE e por fim (AL, BA, CE,MA,PB,PE,PI,RN E SE) para a região nordeste
+
+nas mesmas rotinas de exportação, alertar quando o valor contribuição for igual a zero para conferência de quem está exportando, seguindo nas mesmas rotinas, 
+ter atenção especial no campo geoentdataanivfund ou entdataanivfund, se preenchido tem que enviar para assim termos data de aniversário da pessoa.
+adicionar também nos grupos de oração e coordenadores a categoria 08.009 para que a loja também possa fazer uso destes dados.
+
+Precisamos de atenção também no campo codigotipodecobranca, não pode de maneira alguma ser enviado nulo ou vazio, caso esteja assim, marcar
+com o código '0000027'

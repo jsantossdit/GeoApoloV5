@@ -1,10 +1,10 @@
-﻿unit unt_usuario_ctasfin;
+unit unt_usuario_ctasfin;
 
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, Buttons, ExtCtrls, DBCtrls,
+  Dialogs, StdCtrls, ComCtrls, Buttons, ExtCtrls, DBCtrls, System.Generics.Collections,
   unt_usuario_ctasfin_types, unt_usuario_ctasfin_repository, unt_usuario_ctasfin_service;
 
 type

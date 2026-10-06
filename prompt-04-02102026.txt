@@ -1,0 +1,10 @@
+no menu de administração de sistemas, quando clico para salvar o usuário ele coloca o formulário em segundo plano ou o fecha, manter ele em modal para que 
+não fique abrindo várias telas ao mesmo tempo.
+
+AINDA no formulário de administração de usuário, aba grupos de usuários, ao digitar o texto está saindo ainda em minusculo, vamos padronizar tudo em caixa alta
+
+AINDA NO mesmo formulário, quando der enter ele pula sempre para o próximo campo, ao clicar em novo grupo, controlar sempre o próximo código com a função
+geoapolo_configcod vinda do delphi, usar a tabela user_geoapolo_configcod usando a tabela corretamente.
+
+na aba de liberar permissões aos grupos de usuário, em uma base nova, não está listando os objetos para que as permissões sejam liberadas, precisamos ver isso
+na opção de dicionário de nomes amigáveis, está apresentando erro informando que falta a coluna categoria

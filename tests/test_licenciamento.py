@@ -7,7 +7,7 @@ Clean Architecture: DTOs, Repositório SQLite em memória e Regras de Negócio d
 from datetime import date, timedelta
 import sqlite3
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from licenciamento.models import (
     LicencaDTO,
@@ -280,6 +280,171 @@ class TestLicenciamentoService(unittest.TestCase):
         # Confirmação
         self.service.confirmar_leitura_versao("5.0.0", "USER1")
         self.mock_repo.marcar_versao_vista.assert_called_with("5.0.0", "USER1")
+
+
+class TestValidacaoLicencaViewJulio(unittest.TestCase):
+    """Testa a regra de visibilidade e descriptografia exclusiva para o usuário JULIO."""
+
+    @classmethod
+    def setUpClass(cls):
+        import tkinter as tk
+        cls.root = tk.Tk()
+        cls.root.withdraw()
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            cls.root.destroy()
+        except Exception:
+            pass
+
+    def test_painel_julio_visivel_apenas_para_julio(self):
+        """Valida que os componentes de senhas existem apenas quando usuario='JULIO'."""
+        import sqlite3
+        from licenciamento.view import ValidacaoLicencaView
+        from core.criptografia import criptografia
+
+        # Cria banco sqlite simulando USER_geoapolo_usuarios e user_geoapolo_dicionario
+        conn = sqlite3.connect(":memory:")
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE USER_geoapolo_usuarios (login TEXT, senha TEXT, flagativo TEXT)")
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?)", ("OPERADOR1", criptografia(32, "senha123"), "A"))
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?)", ("JULIO", criptografia(32, "mestre99"), "A"))
+        cur.execute(
+            """CREATE TABLE user_geoapolo_dicionario (
+                idpalavra TEXT, datainicial TEXT, datafinal TEXT, flagbloqueia TEXT,
+                tempobloqueiodias INTEGER, flagativar TEXT, mesreferencia INTEGER, anoreferencia INTEGER
+            )"""
+        )
+        conn.commit()
+
+        # 1. Usuário comum (ex: MARIA): painel não deve existir
+        view_maria = ValidacaoLicencaView(self.root, connection=conn, usuario="MARIA")
+        self.assertFalse(hasattr(view_maria, "cbo_julio_usuarios"))
+        self.assertFalse(hasattr(view_maria, "btn_julio_decript"))
+        view_maria.destroy()
+
+        # 2. Usuário JULIO: painel deve existir
+        view_julio = ValidacaoLicencaView(self.root, connection=conn, usuario="JULIO")
+        self.assertTrue(hasattr(view_julio, "cbo_julio_usuarios"))
+        self.assertTrue(hasattr(view_julio, "btn_julio_decript"))
+
+        # Checa usuários carregados
+        valores = view_julio.cbo_julio_usuarios["values"]
+        self.assertIn("OPERADOR1", valores)
+        self.assertIn("JULIO", valores)
+
+        # Seleciona OPERADOR1 e testa descriptografia
+        view_julio.cbo_julio_usuarios.set("OPERADOR1")
+        view_julio._on_julio_usuario_selected()
+        self.assertEqual(view_julio.ent_julio_senha_cripto.get(), criptografia(32, "senha123"))
+
+        # Executa descriptografia
+        view_julio._executar_decriptografia_julio()
+        self.assertIn("senha123", view_julio.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view_julio.ent_julio_senha_cripto.get(), "senha123")
+
+        view_julio.destroy()
+        conn.close()
+
+    def test_painel_julio_visibilidade_perfis_admin(self):
+        """Valida que o painel é visível para JULIO, ADMIN, 3 e 003, mas oculto para usuários comuns."""
+        import sqlite3
+        from licenciamento.view import ValidacaoLicencaView
+
+        conn = sqlite3.connect(":memory:")
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE USER_geoapolo_usuarios (login TEXT, senha TEXT, flagativo TEXT)")
+        conn.commit()
+
+        # Permitidos
+        for usr in ("JULIO", "julio", "ADMIN", "admin", "3", "003"):
+            v = ValidacaoLicencaView(self.root, connection=conn, usuario=usr)
+            self.assertTrue(hasattr(v, "cbo_julio_usuarios"), f"Falhou para perfil permitido: {usr}")
+            v.destroy()
+
+        # Bloqueados
+        for usr in ("MARIA", "OPERADOR", "99", "", None):
+            v = ValidacaoLicencaView(self.root, connection=conn, usuario=usr or "")
+            self.assertFalse(hasattr(v, "cbo_julio_usuarios"), f"Falhou para perfil não permitido: {usr}")
+            v.destroy()
+
+        conn.close()
+
+    @patch("tkinter.messagebox.showinfo")
+    @patch("tkinter.messagebox.showerror")
+    def test_descriptografia_senha_alvo_e_dupla_delphi(self, mock_err, mock_info):
+        """Valida a decodificação de senha_alvo (chave 35) e regra idêntica/diferente do Delphi."""
+        import sqlite3
+        from licenciamento.view import ValidacaoLicencaView
+        from core.criptografia import criptografia
+
+        conn = sqlite3.connect(":memory:")
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE USER_geoapolo_usuarios (login TEXT, senha TEXT, senha_alvo TEXT, flagativo TEXT)")
+        # 1. Usuário apenas com senha_alvo (chave 35)
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?, ?)",
+                    ("ALVO_SO", "", criptografia(35, "alvopass123"), "A"))
+        # 2. Usuário com ambas as senhas diferentes
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?, ?)",
+                    ("DUPLA_DIF", criptografia(32, "senhageo"), criptografia(35, "senhaalvo"), "A"))
+        # 3. Usuário com ambas as senhas iguais
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?, ?)",
+                    ("DUPLA_IGUAL", criptografia(32, "senhacomum"), criptografia(35, "senhacomum"), "A"))
+        # 4. Usuário sem senha
+        cur.execute("INSERT INTO USER_geoapolo_usuarios VALUES (?, ?, ?, ?)",
+                    ("SEM_SENHA", "", "", "A"))
+        conn.commit()
+
+        view = ValidacaoLicencaView(self.root, connection=conn, usuario="JULIO")
+
+        # Teste 1: Apenas senha_alvo
+        view.cbo_julio_usuarios.set("ALVO_SO")
+        view._on_julio_usuario_selected()
+        self.assertEqual(view.ent_julio_senha_cripto.get(), criptografia(35, "alvopass123"))
+        view._executar_decriptografia_julio()
+        self.assertEqual("👉 alvopass123", view.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "alvopass123")
+
+        # Teste 2: Dupla diferente (sem comparar com alvo, exibe apenas a senha Geo)
+        view.cbo_julio_usuarios.set("DUPLA_DIF")
+        view._on_julio_usuario_selected()
+        self.assertEqual(view.ent_julio_senha_cripto.get(), criptografia(32, "senhageo"))
+        view._executar_decriptografia_julio()
+        self.assertEqual("👉 senhageo", view.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "senhageo")
+
+        # Teste 3: Dupla igual
+        view.cbo_julio_usuarios.set("DUPLA_IGUAL")
+        view._on_julio_usuario_selected()
+        self.assertEqual(view.ent_julio_senha_cripto.get(), criptografia(32, "senhacomum"))
+        view._executar_decriptografia_julio()
+        self.assertEqual("👉 senhacomum", view.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "senhacomum")
+
+        # Teste 4: Sem senha
+        view.cbo_julio_usuarios.set("SEM_SENHA")
+        view._on_julio_usuario_selected()
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "")
+        view._executar_decriptografia_julio()
+        self.assertEqual("(sem senha cadastrada)", view.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "")
+
+        # Teste 5: Texto digitado manualmente no campo cifrado
+        view.ent_julio_senha_cripto.delete(0, "end")
+        view.ent_julio_senha_cripto.insert(0, criptografia(32, "digitada_manual"))
+        view._executar_decriptografia_julio()
+        self.assertEqual("👉 digitada_manual", view.lbl_julio_senha_plana.cget("text"))
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "digitada_manual")
+
+        # Teste 6: Segundo clique consecutivo no botão não gera erro e mantém o campo alimentado
+        view._executar_decriptografia_julio()
+        self.assertEqual(view.ent_julio_senha_cripto.get(), "digitada_manual")
+        self.assertEqual("👉 digitada_manual", view.lbl_julio_senha_plana.cget("text"))
+
+        view.destroy()
+        conn.close()
+
 
 
 if __name__ == "__main__":

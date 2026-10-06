@@ -50,27 +50,42 @@ object frmconfigperfil: Tfrmconfigperfil
       Caption = 'Limpar'
       OnClick = spblimparClick
     end
-    object spbdeletar: TSpeedButton
+    object spbatualizar: TSpeedButton
       Left = 200
       Top = 6
-      Width = 90
+      Width = 110
       Height = 28
-      Caption = 'Deletar'
-    end
-    object spblocalizar: TSpeedButton
-      Left = 296
-      Top = 6
-      Width = 90
-      Height = 28
-      Caption = 'Localizar'
+      Caption = '&Atualizar Lista'
+      Hint = 
+        'Faz a varredura completa dos objetos do sistema e atualiza a lis' +
+        'ta de permiss'#245'es'
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = spbatualizarClick
     end
     object spbrenomear: TSpeedButton
-      Left = 392
+      Left = 318
       Top = 6
       Width = 100
       Height = 28
       Caption = 'Renomear'
       OnClick = spbrenomearClick
+    end
+    object spbdeletar: TSpeedButton
+      Left = 424
+      Top = 6
+      Width = 80
+      Height = 28
+      Caption = 'Deletar'
+      Visible = False
+    end
+    object spblocalizar: TSpeedButton
+      Left = 510
+      Top = 6
+      Width = 80
+      Height = 28
+      Caption = 'Localizar'
+      Visible = False
     end
     object spbretornar: TSpeedButton
       Left = 606

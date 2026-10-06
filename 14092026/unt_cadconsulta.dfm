@@ -820,7 +820,8 @@ object frmcadconsulta: Tfrmcadconsulta
           Items.Strings = (
             'ALVO'
             'APLICATIVO RCC'
-            'GEOAPOLO')
+            'GEOAPOLO'
+            'SAVIC')
         end
       end
     end

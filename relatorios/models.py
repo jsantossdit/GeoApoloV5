@@ -18,7 +18,8 @@ class TipoRelatorio(Enum):
 
 class FormatoExportacao(Enum):
     EXCEL = "Excel (.xlsx)"
-    HTML_PDF = "Visualizar / Imprimir (HTML/PDF)"
+    PDF = "Arquivo PDF (.pdf)"
+    HTML_PDF = "Visualizar / Imprimir (Navegador)"
     CSV = "Arquivo CSV (.csv)"
 
 

@@ -1,0 +1,11 @@
+Habilitar no cadastro de entidades a busca por categoria, permitindo filtrar todos de uma determinada categoria, preparar um novo botão com o nome
+exporta filtro para o alvo, onde ele deverá pegar todos os registros filtrados e fazer um loop chamando a api para fazer a exportação, validando todos os
+critérios que fizemos até agora, na user_geoapolo_logatividade, salvar também um registro para cada entidade exportada com o texto: "Exportou a Entidade: código e nome
+para o alvo usando o geoapolo"
+
+quando tiver exportando entidades para o geoaplo vindas do grupo de oração, caso o mandato do coordenador esteja vencido, inserir no campo observações do 
+cadastro de entidades na tag [PENDÊNCIAS] "mandato do coordenador está vencido, checar na diocese"
+
+
+
+

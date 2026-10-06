@@ -1,8 +1,8 @@
 unit unt_configbanco_repository;
 
 {
-  Repositório para Leitura, Gravação e Teste de Conexão de Bancos de Dados.
-  Compatível com Windows Registry e FireDAC.
+  RepositÃ³rio para Leitura, GravaÃ§Ã£o e Teste de ConexÃ£o de Bancos de Dados.
+  CompatÃ­vel com Windows Registry e FireDAC.
 }
 
 interface
@@ -29,6 +29,8 @@ type
 
 implementation
 
+uses funcoes;
+
 function TConfigBancoRepository.CarregarConfiguracao(const ATipo: string): TConfigBancoDTO;
 var
   Reg: TRegistry;
@@ -43,11 +45,11 @@ begin
   Reg := TRegistry.Create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKeyReadOnly('sdit\\configuracoes\\DataBase') then
+    if Reg.OpenKeyReadOnly('sdit\configuracoes\DataBase') then
     begin
       if SameText(ATipo, 'MSSQL') or (ATipo = '') then
       begin
-        Result.Servidor   := Reg.ReadString('Nome do ServidorSQL');
+        Result.Servidor   := SanitizarNomeServidor(Reg.ReadString('Nome do ServidorSQL'));
         Result.NomeBanco  := Reg.ReadString('NomeBancoSQL');
         Result.Usuario    := Reg.ReadString('Usuario MSSQL');
         Result.Senha      := Reg.ReadString('Senha do Banco SQL');
@@ -63,6 +65,18 @@ begin
         Result.Senha      := Reg.ReadString('Senha APP');
         Result.Protocolo  := Reg.ReadString('Protocolo APP');
         Result.Porta      := 3306;
+        if Reg.ValueExists('Porta Comunicacao APP') then
+        begin
+          try
+            Result.Porta := StrToIntDef(Trim(Reg.ReadString('Porta Comunicacao APP')), 0);
+            if Result.Porta = 0 then
+              Result.Porta := Reg.ReadInteger('Porta Comunicacao APP');
+          except
+            Result.Porta := 3306;
+          end;
+          if Result.Porta = 0 then
+            Result.Porta := 3306;
+        end;
       end;
       Reg.CloseKey;
     end;
@@ -79,25 +93,25 @@ begin
   Reg := TRegistry.Create;
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    if Reg.OpenKey('sdit\\configuracoes\\DataBase', True) then
+    if Reg.OpenKey('sdit\configuracoes\DataBase', True) then
     begin
       if SameText(AConfig.TipoBanco, 'MSSQL') or (AConfig.TipoBanco = '') then
       begin
-        Reg.WriteString('Nome do ServidorSQL', AConfig.Servidor);
-        Reg.WriteString('IP do ServidorSQL', AConfig.Servidor);
-        Reg.WriteString('NomeBancoSQL', AConfig.NomeBanco);
-        Reg.WriteString('Usuario MSSQL', AConfig.Usuario);
+        Reg.WriteString('Nome do ServidorSQL', SanitizarNomeServidor(AConfig.Servidor));
+        Reg.WriteString('IP do ServidorSQL', SanitizarNomeServidor(AConfig.Servidor));
+        Reg.WriteString('NomeBancoSQL', Trim(AConfig.NomeBanco));
+        Reg.WriteString('Usuario MSSQL', Trim(AConfig.Usuario));
         Reg.WriteString('Senha do Banco SQL', AConfig.Senha);
-        Reg.WriteString('ProtocoloSQL', AConfig.Protocolo);
+        Reg.WriteString('ProtocoloSQL', Trim(AConfig.Protocolo));
       end
       else if SameText(AConfig.TipoBanco, 'MySQL') then
       begin
-        Reg.WriteString('Nome do Servidor APP', AConfig.Servidor);
-        Reg.WriteString('IP do Servidor APP', AConfig.Servidor);
-        Reg.WriteString('NomeBancoAPP', AConfig.NomeBanco);
-        Reg.WriteString('Usuario admin APP', AConfig.Usuario);
+        Reg.WriteString('Nome do Servidor APP', SanitizarNomeServidor(AConfig.Servidor));
+        Reg.WriteString('IP do Servidor APP', SanitizarNomeServidor(AConfig.Servidor));
+        Reg.WriteString('NomeBancoAPP', Trim(AConfig.NomeBanco));
+        Reg.WriteString('Usuario admin APP', Trim(AConfig.Usuario));
         Reg.WriteString('Senha APP', AConfig.Senha);
-        Reg.WriteString('Protocolo APP', AConfig.Protocolo);
+        Reg.WriteString('Protocolo APP', Trim(AConfig.Protocolo));
         Reg.WriteInteger('Porta Comunicacao APP', AConfig.Porta);
       end;
       Reg.CloseKey;
@@ -124,10 +138,13 @@ begin
       if SameText(AConfig.TipoBanco, 'MSSQL') or (AConfig.TipoBanco = '') then
       begin
         Conn.DriverName := 'MSSQL';
-        Conn.Params.Values['Server'] := AConfig.Servidor;
-        Conn.Params.Values['Database'] := AConfig.NomeBanco;
-        Conn.Params.Values['User_Name'] := AConfig.Usuario;
+        Conn.Params.Values['Server'] := SanitizarNomeServidor(AConfig.Servidor);
+        Conn.Params.Values['Database'] := Trim(AConfig.NomeBanco);
+        Conn.Params.Values['User_Name'] := Trim(AConfig.Usuario);
         Conn.Params.Values['Password'] := AConfig.Senha;
+        Conn.Params.Values['Encrypt'] := 'No';
+        Conn.Params.Values['TrustServerCertificate'] := 'Yes';
+        Conn.Params.Values['MARS'] := 'Yes';
         if AConfig.Porta > 0 then
           Conn.Params.Values['Port'] := IntToStr(AConfig.Porta);
       end

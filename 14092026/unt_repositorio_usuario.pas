@@ -62,13 +62,28 @@ begin
 
   Q := CriarQuery;
   try
-    Q.SQL.Text :=
-      'SELECT usucod, login, nome_completo, usucod_apolo, senha, senha_alvo, flagativo ' +
-      'FROM USER_geoapolo_usuarios ' +
-      'WHERE login = :login AND flagativo = :flagativo';
-    Q.ParamByName('login').AsString    := ALogin;
-    Q.ParamByName('flagativo').AsString := 'A';
-    Q.Open;
+    try
+      Q.SQL.Text :=
+        'SELECT usucod, login, nome_completo, usucod_apolo, senha, senha_alvo, flagativo ' +
+        'FROM USER_geoapolo_usuarios ' +
+        'WHERE login = :login AND flagativo = :flagativo';
+      Q.ParamByName('login').AsString    := ALogin;
+      Q.ParamByName('flagativo').AsString := 'A';
+      Q.Open;
+    except
+      on E: Exception do
+      begin
+        // Caso a base não possua a coluna senha_alvo (base sem integração com o Alvo)
+        Q.Close;
+        Q.SQL.Text :=
+          'SELECT usucod, login, nome_completo, usucod_apolo, senha, '''' AS senha_alvo, flagativo ' +
+          'FROM USER_geoapolo_usuarios ' +
+          'WHERE login = :login AND flagativo = :flagativo';
+        Q.ParamByName('login').AsString    := ALogin;
+        Q.ParamByName('flagativo').AsString := 'A';
+        Q.Open;
+      end;
+    end;
 
     if not Q.IsEmpty then
     begin

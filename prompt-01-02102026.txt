@@ -1,0 +1,31 @@
+no formulário de cadastro de produtos, o nome do campo tamanho foi alterado para unidademedida, precisa alterar ele nos diversos módulos do controle de estoque
+
+no menu cadastro \ centro de controle\ não está chamando a opção do formulário de cadastro dos centros de controle, pode usar o formulário delphi como referência
+
+usar o script abaixo para criar a tabela de lote e no menu cadastro, criar o formulário para o cadastro e controle dos lotes, depois no menu geoalvo \ controle 
+de estoque, na movimentação adicionar campos para que possa ser informado na movimentação o número de lote conforme o que for cadastrado na tabela, quando o 
+numero de lote não existir, fazer a pergunta se deseja abrir o lote no sistema, se for respondido não, segue a movimentação, se for respondido sim, chamar o formulário
+de cadastro de controle de lote
+
+CREATE TABLE user_geoapolo_produto_lote
+(
+    ID_PRODUTO_LOTE BIGINT IDENTITY(1,1) NOT NULL,
+    prodcod numeric(8,0) NOT NULL,
+    NUMERO_LOTE     VARCHAR(50) NOT NULL,
+    DATA_FABRICACAO DATE NULL,
+	DATA_VALIDADE   DATE NULL,
+    QUANTIDADE_INICIAL DECIMAL(18,6) NOT NULL DEFAULT 0,
+	QUANTIDADE_ATUAL   DECIMAL(18,6) NOT NULL DEFAULT 0,
+    DATA_ENTRADA DATETIME2(0) NOT NULL DEFAULT SYSDATETIME(),
+    entcod_fornecedor numeric(8,0) NULL,
+    STATUS CHAR(1) NOT NULL DEFAULT 'A',
+    OBSERVACAO VARCHAR(500) NULL,
+    DATA_CADASTRO DATETIME2(0) NOT NULL  DEFAULT SYSDATETIME(),
+    usucod VARCHAR(20) NULL,
+
+    CONSTRAINT PK_PRODUTO_LOTE  PRIMARY KEY (ID_PRODUTO_LOTE),
+
+    CONSTRAINT CK_PRODUTO_LOTE_STATUS  CHECK (STATUS IN ('A','I')),
+
+    CONSTRAINT CK_PRODUTO_LOTE_QUANTIDADE  CHECK (QUANTIDADE_INICIAL >= 0 AND QUANTIDADE_ATUAL >= 0)
+);

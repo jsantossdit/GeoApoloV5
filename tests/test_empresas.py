@@ -103,6 +103,9 @@ class TestEmpresasService(unittest.TestCase):
         self.service = EmpresasService(self.mock_repo)
         EmpresasService._empresa_ativa_contexto = None
 
+    def tearDown(self):
+        EmpresasService._empresa_ativa_contexto = None
+
     def test_salvar_validacoes(self):
         r1 = self.service.salvar_empresa(EmpresaDTO(empcod="", empnome="Nome"))
         self.assertFalse(r1.sucesso)

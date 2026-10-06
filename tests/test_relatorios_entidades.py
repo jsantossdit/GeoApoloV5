@@ -134,6 +134,40 @@ class TestRelatorioGenerator(unittest.TestCase):
         except OSError:
             pass
 
+    def test_gerar_pdf_com_dados(self):
+        """Verifica se o relatório PDF é gerado corretamente via fpdf2."""
+        caminho_pdf = os.path.join(self.temp_dir, "teste_relatorio.pdf")
+        resultado = RelatorioGenerator.gerar_pdf(
+            self.dados_amostra, "Relatório Geral de Entidades", caminho_pdf
+        )
+        self.assertTrue(os.path.exists(resultado), "Arquivo PDF deve existir após geração.")
+        self.assertGreater(os.path.getsize(resultado), 1000, "Arquivo PDF não deve estar vazio.")
+        with open(resultado, "rb") as f:
+            header = f.read(5)
+            self.assertEqual(header, b"%PDF-", "Arquivo deve conter cabeçalho padrão de PDF.")
+
+    def test_gerar_pdf_vazio(self):
+        """Verifica se relatório PDF com lista vazia gera mensagem informativa sem erros."""
+        caminho_pdf = os.path.join(self.temp_dir, "teste_vazio.pdf")
+        resultado = RelatorioGenerator.gerar_pdf([], "Relatório Vazio", caminho_pdf)
+        self.assertTrue(os.path.exists(resultado))
+        self.assertGreater(os.path.getsize(resultado), 500)
+        with open(resultado, "rb") as f:
+            self.assertEqual(f.read(5), b"%PDF-")
+
+    def test_gerar_pdf_orientacao_dinamica(self):
+        """Verifica geração com muitas colunas (>5) e poucas colunas."""
+        # 1. Muitas colunas -> Paisagem (dados_amostra tem 11 colunas)
+        caminho_l = os.path.join(self.temp_dir, "teste_landscape.pdf")
+        RelatorioGenerator.gerar_pdf(self.dados_amostra, "Muitas Colunas", caminho_l)
+        self.assertTrue(os.path.exists(caminho_l))
+
+        # 2. Poucas colunas -> Retrato
+        dados_poucas_cols = [{"Código": "1", "Nome": "Teste"}]
+        caminho_p = os.path.join(self.temp_dir, "teste_portrait.pdf")
+        RelatorioGenerator.gerar_pdf(dados_poucas_cols, "Poucas Colunas", caminho_p)
+        self.assertTrue(os.path.exists(caminho_p))
+
 
 class TestEntidadeService(unittest.TestCase):
     """Testa regras de negócio e validações do EntidadeService."""
@@ -180,12 +214,17 @@ class TestEntidadeService(unittest.TestCase):
         self.assertFalse(pode)
         self.assertIn("já está na base alvo", msg.lower())
 
-        # Se houver observações pendentes
-        pode, msg = self.service.pode_exportar_para_alvo("GeoApolo", "Aguardando aprovação de doc")
+        # Se houver observações pendentes com tag [PENDÊNCIAS]
+        pode, msg = self.service.pode_exportar_para_alvo("GeoApolo", "[PENDÊNCIAS] Aguardando aprovação de doc")
         self.assertFalse(pode)
-        self.assertIn("observações", msg.lower())
+        self.assertIn("pendências", msg.lower())
 
-        # Válido para exportar
+        # Se houver apenas [INFORMAÇÕES], exportação é permitida normalmente
+        pode, msg = self.service.pode_exportar_para_alvo("GeoApolo", "[INFORMAÇÕES] Dia da Semana: Terça")
+        self.assertTrue(pode)
+        self.assertEqual(msg, "")
+
+        # Válido para exportar sem observações
         pode, msg = self.service.pode_exportar_para_alvo("GeoApolo", "")
         self.assertTrue(pode)
         self.assertEqual(msg, "")
@@ -317,6 +356,60 @@ class TestRelatorioService(unittest.TestCase):
         dados_ocor = service.obter_dados_relatorio(filtro_ocor)
         sql_ocor = mock_cursor.execute.call_args[0][0]
         self.assertIn("ocorcod IS NOT NULL", sql_ocor)
+
+
+class TestEntidadeRepositoryColunasResilientes(unittest.TestCase):
+    """Testa a normalização de colunas e mecanismos de resiliência no EntidadeRepository."""
+
+    def setUp(self):
+        from entidades.repository import EntidadeRepository
+        self.mock_cursor = MagicMock()
+        self.mock_conn = MagicMock()
+        self.mock_conn.cursor.return_value = self.mock_cursor
+        self.repo = EntidadeRepository(self.mock_conn)
+
+    def test_consultar_lista_normaliza_geoentnome_para_entnome(self):
+        self.mock_cursor.description = [("entcod",), ("entnome",)]
+        self.mock_cursor.fetchall.return_value = [("1", "TESTE")]
+
+        # Na base Alvo, normaliza para e.entnome
+        filtro_alvo = EntidadeFiltro(
+            base_dados="Alvo",
+            tipo_pesquisa="Especifica",
+            campo_busca="geoentnome",
+            texto_busca="JOAO",
+            campo_ordenacao="geoentnome",
+        )
+        self.repo.consultar_lista(filtro_alvo)
+        sql_alvo = self.mock_cursor.execute.call_args[0][0]
+        self.assertIn("e.entnome LIKE", sql_alvo)
+
+        # Na base GeoApolo, a view entidades_geoapolo usa e.geoentnome
+        filtro_geo = EntidadeFiltro(
+            base_dados="GeoApolo",
+            tipo_pesquisa="Especifica",
+            campo_busca="entnome",
+            texto_busca="JOAO",
+            campo_ordenacao="entnome",
+        )
+        self.repo.consultar_lista(filtro_geo)
+        sql_geo = self.mock_cursor.execute.call_args[0][0]
+        self.assertIn("e.geoentnome LIKE", sql_geo)
+
+    def test_consultar_lista_normaliza_documento_para_entcpfcgc(self):
+        self.mock_cursor.description = [("entcod",), ("EntCpfCgc",)]
+        self.mock_cursor.fetchall.return_value = [("1", "12345678900")]
+
+        filtro = EntidadeFiltro(
+            base_dados="Alvo",
+            tipo_pesquisa="Especifica",
+            campo_busca="Documento",
+            texto_busca="12345",
+        )
+        self.repo.consultar_lista(filtro)
+        sql = self.mock_cursor.execute.call_args[0][0]
+        self.assertIn("e.EntCpfCgc LIKE", sql)
+        self.assertNotIn("e.Documento LIKE", sql)
 
 
 if __name__ == "__main__":

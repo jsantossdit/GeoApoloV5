@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional
 from datetime import date, datetime
+from core import centralizar_janela, vincular_mascara_data, parse_data_flexivel
 from .models import FiltroExclusaoModuloDTO
 from .repository import ContabilidadeRepository
 from .service import ContabilidadeService
@@ -21,10 +22,10 @@ class ExclusaoContabilView:
 
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Exclusão de Lançamentos Contábeis")
-        self.window.geometry("980x680")
         self.window.minsize(850, 580)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 980, 680)
 
         self._setup_ui()
         self._pesquisar_geral()
@@ -165,16 +166,18 @@ class ExclusaoContabilView:
         param_frame = ttk.LabelFrame(self.tab_modulo, text=" Critérios para Exclusão em Lote ", padding="10")
         param_frame.pack(fill=tk.X, pady=(0, 8))
 
-        ttk.Label(param_frame, text="Data Inicial (AAAA-MM-DD):").grid(row=0, column=0, padx=5, sticky="w")
+        ttk.Label(param_frame, text="Data Inicial:").grid(row=0, column=0, padx=5, sticky="w")
         self.txt_dt_ini = ttk.Entry(param_frame, width=14)
-        hoje = date.today().strftime("%Y-%m-%d")
+        hoje = date.today().strftime("%d/%m/%Y")
         self.txt_dt_ini.insert(0, hoje)
         self.txt_dt_ini.grid(row=0, column=1, padx=5, sticky="w")
+        vincular_mascara_data(self.txt_dt_ini)
 
-        ttk.Label(param_frame, text="Data Final (AAAA-MM-DD):").grid(row=0, column=2, padx=5, sticky="w")
+        ttk.Label(param_frame, text="Data Final:").grid(row=0, column=2, padx=5, sticky="w")
         self.txt_dt_fim = ttk.Entry(param_frame, width=14)
         self.txt_dt_fim.insert(0, hoje)
         self.txt_dt_fim.grid(row=0, column=3, padx=5, sticky="w")
+        vincular_mascara_data(self.txt_dt_fim)
 
         ttk.Label(param_frame, text="Módulo:").grid(row=0, column=4, padx=5, sticky="w")
         self.cbo_mod_lote = ttk.Combobox(
@@ -325,11 +328,10 @@ class ExclusaoContabilView:
         for it in self.tree_lote.get_children():
             self.tree_lote.delete(it)
 
-        try:
-            dt_ini = datetime.strptime(self.txt_dt_ini.get().strip(), "%Y-%m-%d").date()
-            dt_fim = datetime.strptime(self.txt_dt_fim.get().strip(), "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Formato de data inválido. Use AAAA-MM-DD.")
+        dt_ini = parse_data_flexivel(self.txt_dt_ini.get().strip())
+        dt_fim = parse_data_flexivel(self.txt_dt_fim.get().strip())
+        if not dt_ini or not dt_fim:
+            messagebox.showwarning("Data Inválida", "Formato de data inválido. Use DD/MM/AAAA.")
             return
 
         filtro = FiltroExclusaoModuloDTO(
@@ -362,11 +364,10 @@ class ExclusaoContabilView:
             messagebox.showerror("Erro ao Pesquisar Lote", str(e))
 
     def _executar_exclusao_lote(self):
-        try:
-            dt_ini = datetime.strptime(self.txt_dt_ini.get().strip(), "%Y-%m-%d").date()
-            dt_fim = datetime.strptime(self.txt_dt_fim.get().strip(), "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Formato de data inválido. Use AAAA-MM-DD.")
+        dt_ini = parse_data_flexivel(self.txt_dt_ini.get().strip())
+        dt_fim = parse_data_flexivel(self.txt_dt_fim.get().strip())
+        if not dt_ini or not dt_fim:
+            messagebox.showwarning("Data Inválida", "Formato de data inválido. Use DD/MM/AAAA.")
             return
 
         filtro = FiltroExclusaoModuloDTO(
@@ -379,7 +380,7 @@ class ExclusaoContabilView:
         if not messagebox.askyesno(
             "ALERTA DE SEGURANÇA",
             f"ATENÇÃO: Deseja realmente excluir em LOTE todos os lançamentos do módulo '{filtro.modulo}' "
-            f"no período de {dt_ini} até {dt_fim}?\n\nEsta operação é definitiva!",
+            f"no período de {dt_ini.strftime('%d/%m/%Y')} até {dt_fim.strftime('%d/%m/%Y')}?\n\nEsta operação é definitiva!",
         ):
             return
 

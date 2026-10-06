@@ -22,7 +22,7 @@ _raiz_projeto = str(Path(__file__).resolve().parent)
 if _raiz_projeto not in sys.path:
     sys.path.insert(0, _raiz_projeto)
 
-from core import obter_caminho_recurso
+from core import obter_caminho_recurso, aplicar_icone_janela
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +54,7 @@ class TelaSelecaoEmpresa:
         self.root.minsize(580, 360)
 
         # Configura ícone da janela
-        caminho_icone = obter_caminho_recurso(os.path.join("Imagens", "GeoApolo_Icon.ico"))
-        if os.path.exists(caminho_icone):
-            try:
-                self.root.iconbitmap(caminho_icone)
-            except Exception:
-                pass
+        aplicar_icone_janela(self.root)
 
         self._criar_interface()
         self._configurar_eventos()
@@ -67,16 +62,10 @@ class TelaSelecaoEmpresa:
         self.carregar_empresas()
 
     def _centralizar_janela(self):
-        """Centraliza o formulário na tela."""
+        """Centraliza o formulário na tela ou em relação à janela mãe."""
         try:
-            self.root.update_idletasks()
-            largura = 680
-            altura = 420
-            largura_tela = self.root.winfo_screenwidth()
-            altura_tela = self.root.winfo_screenheight()
-            x = max(0, (largura_tela - largura) // 2)
-            y = max(0, (altura_tela - altura) // 2)
-            self.root.geometry(f"{largura}x{altura}+{x}+{y}")
+            from core import centralizar_janela
+            centralizar_janela(self.root, self.parent, 680, 420)
             self.root.deiconify()
             self.root.lift()
             self.root.focus_force()
@@ -209,19 +198,41 @@ class TelaSelecaoEmpresa:
 
     def _configurar_eventos(self):
         """Atalhos de teclado idênticos ao Delphi unt_selecionaempresa.pas."""
-        self.tree_empresas.bind("<Double-1>", lambda e: self.confirmar_selecao())
-        self.tree_empresas.bind("<Return>", lambda e: self.confirmar_selecao())
-        self.root.bind("<Return>", lambda e: self.confirmar_selecao())
+        self.tree_empresas.bind("<Double-1>", self._on_tree_double_click)
+        self.tree_empresas.bind("<Return>", self._ao_teclar_enter)
+        self.root.bind("<Return>", self._ao_teclar_enter)
 
         # Atalho F3 (idêntico ao Delphi: if key = vk_f3 then gridempresas.OnDblClick)
-        self.root.bind("<F3>", lambda e: self.confirmar_selecao())
-        self.tree_empresas.bind("<F3>", lambda e: self.confirmar_selecao())
+        self.root.bind("<F3>", self._ao_pressionar_f3)
+        self.tree_empresas.bind("<F3>", self._ao_pressionar_f3)
 
         # Atalho F10 e Esc para retornar (idêntico ao Delphi: if key = vk_f10 then spbretornar.click)
-        self.root.bind("<F10>", lambda e: self.cancelar())
-        self.root.bind("<Escape>", lambda e: self.cancelar())
+        self.root.bind("<F10>", self._ao_cancelar_evento)
+        self.root.bind("<Escape>", self._ao_cancelar_evento)
 
         self.root.protocol("WM_DELETE_WINDOW", self.cancelar)
+
+    def _ao_teclar_enter(self, event=None):
+        self.confirmar_selecao()
+        return "break"
+
+    def _ao_pressionar_f3(self, event=None):
+        self.confirmar_selecao()
+        return "break"
+
+    def _ao_cancelar_evento(self, event=None):
+        self.cancelar()
+        return "break"
+
+    def _on_tree_double_click(self, event=None):
+        """Garante que a linha clicada com duplo clique seja selecionada antes de confirmar."""
+        if event:
+            row_id = self.tree_empresas.identify_row(event.y)
+            if row_id:
+                self.tree_empresas.selection_set(row_id)
+                self.tree_empresas.focus(row_id)
+        self.confirmar_selecao()
+        return "break"
 
     def carregar_empresas(self):
         """Consulta as empresas na tabela USER_geoapolo_empresas do banco ativo."""
@@ -238,7 +249,14 @@ class TelaSelecaoEmpresa:
             conn.close()
 
             if not linhas:
-                self.status_bar.config(text="Nenhuma empresa cadastrada na tabela USER_geoapolo_empresas.")
+                self.status_bar.config(text="Nenhuma empresa cadastrada na base. Empresa padrão (1.01) selecionada.")
+                # Insere empresa padrão de contingência para permitir o acesso administrativo inicial
+                self.tree_empresas.insert("", tk.END, values=("1.01", "1.01 - RCC BRASIL (Padrão)"))
+                primeiro = self.tree_empresas.get_children()
+                if primeiro:
+                    self.tree_empresas.selection_set(primeiro[0])
+                    self.tree_empresas.focus(primeiro[0])
+                    self.tree_empresas.focus_set()
                 return
 
             for r in linhas:
@@ -246,11 +264,17 @@ class TelaSelecaoEmpresa:
                 nome = str(r[1] or "").strip()
                 self.tree_empresas.insert("", tk.END, values=(cod, nome))
 
-            # Seleciona o primeiro registro por padrão
-            primeiro = self.tree_empresas.get_children()
-            if primeiro:
-                self.tree_empresas.selection_set(primeiro[0])
-                self.tree_empresas.focus(primeiro[0])
+            # Seleciona preferencialmente a empresa 1.01 ou a primeira da lista
+            filhos = self.tree_empresas.get_children()
+            item_selecionado = filhos[0] if filhos else None
+            for item in filhos:
+                val = self.tree_empresas.item(item, "values")
+                if val and str(val[0]).strip() == "1.01":
+                    item_selecionado = item
+                    break
+            if item_selecionado:
+                self.tree_empresas.selection_set(item_selecionado)
+                self.tree_empresas.focus(item_selecionado)
                 self.tree_empresas.focus_set()
 
             self.status_bar.config(
@@ -258,8 +282,14 @@ class TelaSelecaoEmpresa:
             )
         except Exception as exc:
             logger.error("Falha ao consultar empresas no banco: %s", exc)
-            self.status_bar.config(text=f"Erro ao carregar empresas: {exc}")
-            messagebox.showerror("Erro de Banco", f"Não foi possível listar as empresas:\n{exc}")
+            self.status_bar.config(text=f"Erro de conexão com o banco. Pressione Enter para modo de contingência.")
+            # Insere opção de contingência corporativa para que o usuário não fique bloqueado
+            self.tree_empresas.insert("", tk.END, values=("1.01", "1.01 - RCC BRASIL"))
+            primeiro = self.tree_empresas.get_children()
+            if primeiro:
+                self.tree_empresas.selection_set(primeiro[0])
+                self.tree_empresas.focus(primeiro[0])
+                self.tree_empresas.focus_set()
 
     def confirmar_selecao(self):
         """Confirma a empresa selecionada e prossegue para a aplicação principal."""
@@ -278,35 +308,68 @@ class TelaSelecaoEmpresa:
         nome = str(valores[1]).strip()
         self.empresa_selecionada = (cod, nome)
 
-        # Atualiza o contexto ativo através do EmpresasService se disponível
+        # Atualiza a empresa ativa globalmente na sessão e no contexto corporativo
         try:
+            from core.sessao import definir_empresa_ativa
+            definir_empresa_ativa(cod, nome)
+        except Exception:
+            try:
+                from logon import sessao_usuario_atual
+                sessao_usuario_atual["codigo_empresa"] = cod
+                sessao_usuario_atual["empcod"] = cod
+                sessao_usuario_atual["nome_empresa"] = nome
+            except Exception:
+                pass
+            try:
+                from entidades.database import obter_conexao_banco
+                from empresas.repository import EmpresasRepository
+                from empresas.service import EmpresasService
+                conn = obter_conexao_banco()
+                service = EmpresasService(EmpresasRepository(conn))
+                service.selecionar_empresa_ativa(cod)
+                conn.close()
+            except Exception:
+                pass
+
+
+        # Atualiza status de integração com Alvo para a empresa selecionada
+        try:
+            from logon import sessao_usuario_atual
             from entidades.database import obter_conexao_banco
-            from empresas.repository import EmpresasRepository
-            from empresas.service import EmpresasService
-            conn = obter_conexao_banco()
-            service = EmpresasService(EmpresasRepository(conn))
-            service.selecionar_empresa_ativa(cod)
-            conn.close()
+            conn_cfg = obter_conexao_banco()
+            cur_cfg = conn_cfg.cursor()
+            cur_cfg.execute("SELECT integra_base_apolomix, integra_entidades_apolo FROM USER_geoapolo_configuracoes WHERE empcod = ?", [cod])
+            cfg_row = cur_cfg.fetchone()
+            if cfg_row:
+                integra_base = str(cfg_row[0] or "").strip().upper()
+                integra_ent = str(cfg_row[1] or "").strip().lower()
+                if integra_base == "N" or integra_ent in ("não integra", "nao integra"):
+                    sessao_usuario_atual["integra_alvo"] = False
+            conn_cfg.close()
+        except Exception:
+            pass
+
+        try:
+            self.root.destroy()
         except Exception:
             pass
 
         if self.on_confirmar:
             self.on_confirmar(cod, nome)
-        else:
-            try:
-                self.root.destroy()
-            except Exception:
-                pass
+
+        return "break"
 
     def cancelar(self):
         """Cancela a seleção de empresa e retorna para a tela de logon."""
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
         if self.on_cancelar:
             self.on_cancelar()
-        else:
-            try:
-                self.root.destroy()
-            except Exception:
-                pass
+
+        return "break"
 
     def executar(self):
         """Inicia o loop da interface gráfica."""

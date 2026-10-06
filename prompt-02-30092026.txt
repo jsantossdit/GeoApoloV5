@@ -1,0 +1,11 @@
+No formulário de consultas Imediatas, implementar na combo de banco de dados o termo SAVIC, para consultas salvas com este banco de dados,
+na hora de executar, aplicar as configurações de conexão direto com a base savic, fazer em segundo plano a conexão, executar a consulta e 
+retornar o resultado, caso não tenha configurado a base savic, exibir mensagem "Solicite ao Administrador a configuração de acesso aos dados do
+SAVIC".
+
+no formulário de entidades, nas rotinas de exportação de dados para o alvo, quando a entidade tem um contato vinculado a ela, deve buscar no 
+geoalvo os dados do contato, pelo cpf verificar se já existe ou não no alvo, se já existir, traz o entcod do alvo e vincula para integrar, caso
+não encontre, faz primeiro a integração do contato e em seguida finaliza a integração da entidade que originou o caso. Atualizar as rotinas tanto
+para novas entidades (quando não tem no alvo) quanto a rotina que já tem para que as atualizações sejam feitas.
+
+ao final atualizar o executável

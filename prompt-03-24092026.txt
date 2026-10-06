@@ -1,0 +1,21 @@
+no terceiro e ultimo prompt do dia, na opção de moderação de grupos de oração savic x alvo, o botão de exportar para entidades é para pegar todos os registros que
+foram filtrados e fazer um loop até que todos sejam exportados, abaixo segue uma relação dos campos necessários e a relação de -> para entre o cadastro
+de entidades do geoalvo.
+
+para cada registro salvo no cadastro de entidades, o campo exportado deve ser atualizado para Sim, com isso após atualizar a linha poderá ficar destacada na cor
+amarela, relação de campos abaixo
+
+1 - idsavic = (novo campo a ser criado na tabela user_geoapolo_entidades)
+2 - codigo apolo - entcod - deve na tabela de coordenadores de grupo de oração troque por favor o nome codigo apolo para entcod.
+3 - nome do coordenador - geoentnome
+4 - cpf - (tabela user_geoapolo_entidades_documentos deve associar a 2 campos, tipo = CPF/CNPJ e geoentnumerodocumento = cpf
+5 - inicio - geoentdtinicio
+6 - final - geoentdtfim
+7 - indeterminado - (criar na tabela user_geoapolo_entidades um novo campo (geomandatocoord varchar 3 default 'Não')
+8 - telefones - após gerar o geoentcod, inserir os telefones na tabela user_geoapolo_entidades_comunicacao
+9 - celular - da mesma forma que o anterior, mas para o anterior e esse, será diferenciado no tipo de telefone e deverá ser inserido em user_geoapolo_entidades_comunicacao
+10 - email - marcado como principal, deve ser inserido na tabela user_geoapolo_entidades_webcontato com o tipo e-mail
+11 - bairro - deverá ser salvo em user_geoapolo_entidades no campo de mesmo nome
+12 - cep - pegar o cep e acessar a api do viacep, confirmar o endereço confrontando com os campos de endereço da user_geoapolo_entidades
+13 - cidade - deve ser salvo somente o código da cidade na user_geoapolo_entidade, mas deve ser validado na tabela user_geoapolo_cidades, após receber os dados 
+da api do via cep, caso a cidade não exista na tabela, deve inserir ela.e:[ee

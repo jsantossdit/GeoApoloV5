@@ -5,7 +5,7 @@ GeoApolo V5
 
 import sqlite3
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from usuarios.models import (
     UsuarioDTO,
@@ -445,6 +445,135 @@ class TestUsuariosService(unittest.TestCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0].login, "user1")
 
+
+class TestUsuariosViewRefinamentos(unittest.TestCase):
+    """Testes dos novos botões com ícones, tooltips e regra de decriptografia exclusiva do usuário julio."""
+
+    def setUp(self):
+        import tkinter as tk
+        from unittest.mock import patch, MagicMock
+        from core.criptografia import criptografia
+
+        self.root = tk.Tk()
+        self.root.withdraw()
+
+        self.mock_service = MagicMock(spec=UsuariosService)
+        self.mock_service.listar_usuarios.return_value = [
+            UsuarioDTO(usucod="USR01", login="julio", nome_completo="Julio Cesar", senha_alvo=criptografia(32, "segredo123")),
+            UsuarioDTO(usucod="USR02", login="carlos", nome_completo="Carlos Lima", senha_alvo=criptografia(32, "outrasenha")),
+        ]
+        self.mock_service.listar_departamentos.return_value = []
+        self.mock_service.listar_sistemas.return_value = []
+        self.mock_service.listar_grupos.return_value = []
+        self.mock_service.listar_sistemas_usuario.return_value = []
+
+        from usuarios.view import UsuariosView
+        self.view = UsuariosView(parent=self.root, service=self.mock_service)
+
+    def tearDown(self):
+        try:
+            self.view.destroy()
+            self.root.destroy()
+        except Exception:
+            pass
+
+    def test_botoes_sem_texto_e_com_icones(self):
+        """Verifica que os botões solicitados não possuem texto visível (usam ícone/tooltip)."""
+        # Botões de usuário
+        self.assertEqual(self.view.btn_novo.cget("text"), "")
+        self.assertEqual(self.view.btn_salvar.cget("text"), "")
+        self.assertEqual(self.view.btn_excluir.cget("text"), "")
+
+        # Botões de vínculo de sistema
+        self.assertEqual(self.view.btn_add_sis.cget("text"), "")
+        self.assertEqual(self.view.btn_rem_sis.cget("text"), "")
+
+        # Botões de grupos
+        self.assertEqual(self.view.btn_novo_grupo.cget("text"), "")
+        self.assertEqual(self.view.btn_salvar_grupo.cget("text"), "")
+        self.assertEqual(self.view.btn_excluir_grupo.cget("text"), "")
+
+        # Botões de membros do grupo
+        self.assertEqual(self.view.btn_add_usuario_grupo.cget("text"), "")
+        self.assertEqual(self.view.btn_rem_usuario_grupo.cget("text"), "")
+
+    def test_botao_decriptografia_visibilidade_exclusiva_julio(self):
+        """O botão de decriptografia deve aparecer SOMENTE para o usuário julio."""
+        # Inicialmente limpo / novo usuário: oculto
+        self.view._novo_usuario()
+        self.assertNotEqual(self.view.btn_decript_senha.winfo_manager(), "pack")
+
+        # Usuário carlos: oculto
+        self.view.ent_login.delete(0, "end")
+        self.view.ent_login.insert(0, "carlos")
+        self.view._atualizar_visibilidade_btn_decript()
+        self.assertNotEqual(self.view.btn_decript_senha.winfo_manager(), "pack")
+
+        # Usuário julio (minúsculo ou maiúsculo): visível
+        self.view.ent_login.delete(0, "end")
+        self.view.ent_login.insert(0, "julio")
+        self.view._atualizar_visibilidade_btn_decript()
+        self.assertEqual(self.view.btn_decript_senha.winfo_manager(), "pack")
+
+        self.view.ent_login.delete(0, "end")
+        self.view.ent_login.insert(0, "JULIO")
+        self.view._atualizar_visibilidade_btn_decript()
+        self.assertEqual(self.view.btn_decript_senha.winfo_manager(), "pack")
+
+        # Limpando ou trocando para outro usuário: volta a ficar oculto
+        self.view.ent_login.delete(0, "end")
+        self.view.ent_login.insert(0, "maria")
+        self.view._atualizar_visibilidade_btn_decript()
+        self.assertNotEqual(self.view.btn_decript_senha.winfo_manager(), "pack")
+
+    @patch("usuarios.view.messagebox.showinfo")
+    def test_decriptografia_senha_julio(self, mock_showinfo):
+        """Testa a rotina de decriptografia e re-ocultação da senha."""
+        from core.criptografia import criptografia
+        senha_plana = "minhasenha2026"
+        senha_cifrada = criptografia(32, senha_plana)
+
+        self.view.ent_login.delete(0, "end")
+        self.view.ent_login.insert(0, "julio")
+        self.view.ent_senha.delete(0, "end")
+        self.view.ent_senha.insert(0, senha_cifrada)
+        self.view.ent_senha.configure(show="*")
+
+        # Clica no botão para decriptografar
+        self.view._alternar_decriptografia_senha()
+        self.assertEqual(self.view.ent_senha.get(), senha_plana)
+        self.assertEqual(self.view.ent_senha.cget("show"), "")
+        mock_showinfo.assert_called()
+
+        # Clica novamente para voltar a ocultar/cifrar
+        self.view._alternar_decriptografia_senha()
+        self.assertEqual(self.view.ent_senha.get(), senha_cifrada)
+        self.assertEqual(self.view.ent_senha.cget("show"), "*")
+
+    def test_excluir_usuario_com_historico_mensagem(self):
+        """Testa mensagem de erro ao tentar excluir usuário com histórico de movimentação."""
+        from usuarios.models import UsuarioDTO, ResultadoOperacaoUsuario
+        self.mock_service.excluir_usuario.side_effect = Exception("FOREIGN KEY constraint failed on movimentos")
+
+        # Chama o serviço real para verificar a mensagem tratada
+        mock_repo = unittest.mock.MagicMock()
+        mock_repo.obter_usuario_por_usucod.return_value = UsuarioDTO(usucod="USR_HIST", login="hist", nome_completo="Histórico")
+        mock_repo.excluir_usuario.side_effect = Exception("The DELETE statement conflicted with the REFERENCE constraint")
+        service = UsuariosService(mock_repo)
+
+        res = service.excluir_usuario("USR_HIST")
+        self.assertFalse(res.sucesso)
+        self.assertIn("histórico de movimentação", res.mensagem.lower())
+
+    def test_excluir_grupo_com_vinculos_mensagem(self):
+        """Testa mensagem ao tentar excluir grupo com restrição de chave/vínculos."""
+        mock_repo = unittest.mock.MagicMock()
+        mock_repo.excluir_grupo.side_effect = Exception("FOREIGN KEY constraint failed")
+        service = UsuariosService(mock_repo)
+
+        res = service.excluir_grupo("GRP_VINC")
+        self.assertFalse(res.sucesso)
+        self.assertIn("vínculos no sistema", res.mensagem.lower())
 
 
 if __name__ == "__main__":

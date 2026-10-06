@@ -21,6 +21,7 @@ class EntidadeFiltro:
     filtro_especial: str = ""             # 'JAEXPORTADA' ou ''
     campo_busca: str = "entnome"
     texto_busca: str = ""
+    categoria_busca: str = ""             # Código ou descrição da categoria para filtro
     campo_ordenacao: str = "entnome"
     ordem_asc: bool = True
     limite: int = 50
@@ -39,7 +40,23 @@ class ItemComparacao:
 
     @property
     def eh_diferente(self) -> bool:
-        return (self.valor_sve or "").strip().lower() != (self.valor_alvo or "").strip().lower()
+        v_sve = (self.valor_sve or "").strip().lower()
+        v_alvo = (self.valor_alvo or "").strip().lower()
+        if self.rotulo == "Gênero":
+            m_sve = "m" if v_sve in ("m", "masculino") else ("f" if v_sve in ("f", "feminino") else v_sve)
+            m_alvo = "m" if v_alvo in ("m", "masculino") else ("f" if v_alvo in ("f", "feminino") else v_alvo)
+            return m_sve != m_alvo
+        if self.rotulo == "CPF / CNPJ":
+            import re
+            d_sve = re.sub(r"\D", "", v_sve)
+            d_alvo = re.sub(r"\D", "", v_alvo)
+            if d_sve or d_alvo:
+                return d_sve != d_alvo
+        if self.rotulo in ("Código Alvo (entcod)", "Código Alvo"):
+            v1 = v_sve.lstrip("0")
+            v2 = v_alvo.lstrip("0")
+            return v1 != v2
+        return v_sve != v_alvo
 
 
 @dataclass

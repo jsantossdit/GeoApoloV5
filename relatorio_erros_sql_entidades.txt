@@ -1,0 +1,18 @@
+[2026-09-26 00:04:08] OPERAÇÃO: consultar_lista_geoapolo
+SQL EXECUTADO:
+SELECT TOP (50) e.*, ue.atualizou_apolo AS status_sincronizacao
+                  FROM entidades_geoapolo e 
+                 INNER JOIN user_geoapolo_entidade ue 
+                    ON e.geoentcod = ue.geoentcod
+                 WHERE e.geoentcod LIKE ?
+                 ORDER BY CASE WHEN ISNULL(ue.atualizou_apolo, 'N') = 'N' AND e.Entobservacoes IS NULL THEN 0 ELSE 1 END, e.entnome ASC
+PARÂMETROS: ['%0000001%']
+ERRO RETORNADO: ('42S22', "[42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid column name 'Entobservacoes'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid column name 'entnome'. (207); [42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Statement(s) could not be prepared. (8180)")
+STACK TRACE:
+Traceback (most recent call last):
+  File "E:\Julio\Projetos-Programas\Projetos-Python\GeoApoloV5\entidades\repository.py", line 412, in consultar_lista
+    cursor.execute(sql, params)
+pyodbc.ProgrammingError: ('42S22', "[42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid column name 'Entobservacoes'. (207) (SQLExecDirectW); [42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid column name 'entnome'. (207); [42S22] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Statement(s) could not be prepared. (8180)")
+
+--------------------------------------------------------------------------------
+

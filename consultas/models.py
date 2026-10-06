@@ -27,7 +27,7 @@ class PermissaoConsultaDTO:
 
     @property
     def autorizado(self) -> bool:
-        return self.autorizacao.upper() == "S"
+        return self.autorizacao.upper() in ("S", "A")
 
     @property
     def status_display(self) -> str:

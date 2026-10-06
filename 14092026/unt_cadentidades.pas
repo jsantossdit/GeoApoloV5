@@ -1,4 +1,4 @@
-﻿unit unt_cadentidades;
+unit unt_cadentidades;
 interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, Variants, Classes, Graphics, Controls, Forms,
@@ -250,6 +250,7 @@ type
     lblufcontato: TLabeledEdit;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure spbsairClick(Sender: TObject);
+    procedure FormKeyPress(Sender: TObject; var Key: Char);
     procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormActivate(Sender: TObject);
     procedure cboescolaridadeKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -539,6 +540,18 @@ procedure Tfrmcadentidade.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   Action := caFree;
 end;
+procedure Tfrmcadentidade.FormKeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then
+  begin
+    if not (ActiveControl is TMemo) and not (ActiveControl is TRichEdit)  then
+    begin
+      Perform(WM_NEXTDLGCTL, 0, 0);
+      Key := #0;
+    end;
+  end;
+end;
+
 procedure Tfrmcadentidade.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if Key = VK_F10 then
@@ -584,7 +597,15 @@ begin
       else
         flagprincipal := 'Não';
       lblentcod.Refresh;
-      lbltipotrat.SetFocus;
+      if controle = 'INCLUSÃO' then
+      begin
+        if cbotipofj.ItemIndex < 0 then cbotipofj.ItemIndex := 0;
+        if cbofalecido.ItemIndex < 0 then cbofalecido.ItemIndex := 0;
+        if cbosexo.ItemIndex < 0 then cbosexo.ItemIndex := 0;
+        if lblentnome.CanFocus then lblentnome.SetFocus;
+      end
+      else
+        lbltipotrat.SetFocus;
       StatusBar1.Panels[3].Text := controle;
     end;
   end;
@@ -1532,35 +1553,39 @@ end;
 // =============================================================================
 procedure Tfrmcadentidade.spbsalvarClick(Sender: TObject);
 var
-  Ent: TEntidade;
-  Service: TEntidadeService;
+  vRes: string;
 begin
-  Ent     := TEntidade.Create;
-  Service := TEntidadeService.Create(modulo_dados.fdbanco);
+  vRes := '';
   try
-    Ent.GeoEntCod    := lblentcod.Text;
-    Ent.Tipotratcod  := lbltipotrat.Text;
-    Ent.Nome         := lblentnome.Text;
-    Ent.NomeFantasia := lblentnomefantasia.Text;
-    Ent.cep          := mskcep.Text;
-    Ent.Logradouro   := lbllogradouro.Text;
-    Ent.Endereco     := lblentender.Text;
-    Ent.numero       := lblentenderno.Text;
-    Ent.Complemento  := lblentendercompl.Text;
-    Ent.Bairro       := lblentbair.Text;
-    Ent.CidadeCod    := lblcidcod.Text;
-    Ent.DataCadastro := StrToDateDef(mskdtcadastro.Text, Now);
     case cin1.ActivePageIndex of
-      0: Service.GravarTela1(Ent);
-      1: Service.GravarTela2(Ent);
-      2: Service.GravarTela3(Ent);
-      3: Service.GravarTela4(Ent);
-      4: Service.GravarTela5(Ent);
-      5: Service.GravarTela6(Ent);
-      6: Service.GravarTela7(Ent);
+      0:
+      begin
+        if (lblnomecargo.Caption = '...') and (NullIfEmpty(lblcargocodestr.Text) <> '') then
+        begin
+          lblnomecargo.Caption := retorna_nomecargo(NullIfEmpty(lblcargocodestr.Text));
+          lblnomecargo.Refresh;
+        end;
+        vRes := grava_entidade(TELA1);
+      end;
+      1:
+      begin
+        case cin2.ActivePageIndex of
+          0: vRes := grava_entidade(TELA2);
+          1: vRes := grava_entidade(TELA3);
+        else
+          vRes := 'OK';
+        end;
+      end;
+      2: vRes := grava_entidade(TELA7);
+    else
+      vRes := 'OK';
     end;
-    ModalResult := mrOk;
-    Close;
+
+    if vRes = 'OK' then
+    begin
+      ModalResult := mrOk;
+      Close;
+    end;
   except
     on E: Exception do
     begin
@@ -1568,8 +1593,6 @@ begin
       ModalResult := mrNone;
     end;
   end;
-  Ent.Free;
-  Service.Free;
 end;
 // =============================================================================
 //  ESCOLARIDADE
@@ -1667,6 +1690,7 @@ var
   vCEP: string;
   vIdadeNumero: Double;
 begin
+  Result := '';
   with frmcadentidade, modulo_dados do
   begin
     if codigo_tela = TELA1 then
@@ -1997,6 +2021,7 @@ begin
           end;
         end;
         fdbanco.Commit;
+        Result := 'OK';
         cin1.ActivePageIndex := 1;
         cin1.Refresh;
         cin2.ActivePageIndex := 0;
@@ -2048,6 +2073,7 @@ begin
         if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
         begin
           fdbanco.Commit;
+          Result := 'OK';
           atualiza_log_entidade_apolo(lblentcod.Text);
           cin2.ActivePageIndex := 1;
           cin2.Refresh;
@@ -2099,6 +2125,7 @@ begin
           if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
           begin
             fdbanco.Commit;
+            Result := 'OK';
             cin2.ActivePageIndex := 2;
             cin2.Refresh;
             lblativecodestr.SetFocus;
@@ -2151,6 +2178,7 @@ begin
           if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
           begin
             fdbanco.Commit;
+            Result := 'OK';
             cin2.ActivePageIndex := 2;
             cin2.Refresh;
             lblativecodestr.SetFocus;
@@ -2195,6 +2223,7 @@ begin
             if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
             begin
               fdbanco.Commit;
+              Result := 'OK';
               lblcategcodestr.Clear;
               lblcategnome.Caption := '...';
               lblcategcodestr.Refresh;
@@ -2229,6 +2258,7 @@ begin
             if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
               begin
                 fdbanco.Commit;
+                Result := 'OK';
                 lblcategcodestr.Clear;
                 lblcategnome.Caption := '...';
                 lblcategnome.Refresh;

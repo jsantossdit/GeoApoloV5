@@ -8,6 +8,7 @@ from tkinter import ttk, messagebox, filedialog
 import csv
 from typing import Optional, List
 from datetime import date, datetime
+from core import centralizar_janela, vincular_mascara_data, parse_data_flexivel
 from .models import DebxCredItemDTO, ResumoConciliacaoDTO
 from .repository import ContabilidadeRepository
 from .service import ContabilidadeService
@@ -22,10 +23,10 @@ class DebxCredView:
 
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Conciliação Débito x Crédito")
-        self.window.geometry("1020x660")
         self.window.minsize(880, 560)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 1020, 660)
 
         self._itens_atuais: List[DebxCredItemDTO] = []
         self._setup_ui()
@@ -53,23 +54,31 @@ class DebxCredView:
         filtro_frame = ttk.LabelFrame(container, text=" Critérios de Conciliação ", padding="10")
         filtro_frame.pack(fill=tk.X, pady=(0, 10))
 
-        hoje = date.today().strftime("%Y-%m-%d")
+        hoje = date.today().strftime("%d/%m/%Y")
 
         ttk.Label(filtro_frame, text="Data Inicial:").grid(row=0, column=0, padx=4, sticky="w")
         self.txt_dt_ini = ttk.Entry(filtro_frame, width=12)
         self.txt_dt_ini.insert(0, hoje)
         self.txt_dt_ini.grid(row=0, column=1, padx=4, sticky="w")
+        vincular_mascara_data(self.txt_dt_ini)
 
         ttk.Label(filtro_frame, text="Data Final:").grid(row=0, column=2, padx=4, sticky="w")
         self.txt_dt_fim = ttk.Entry(filtro_frame, width=12)
         self.txt_dt_fim.insert(0, hoje)
         self.txt_dt_fim.grid(row=0, column=3, padx=4, sticky="w")
+        vincular_mascara_data(self.txt_dt_fim)
 
         ttk.Label(filtro_frame, text="Cód. Reduzido Conta:").grid(row=0, column=4, padx=4, sticky="w")
-        self.txt_conta_red = ttk.Entry(filtro_frame, width=12)
-        self.txt_conta_red.grid(row=0, column=5, padx=4, sticky="w")
+        f_conta = ttk.Frame(filtro_frame)
+        f_conta.grid(row=0, column=5, padx=4, sticky="w")
+
+        self.txt_conta_red = ttk.Entry(f_conta, width=10)
+        self.txt_conta_red.pack(side=tk.LEFT)
         self.txt_conta_red.bind("<FocusOut>", self._buscar_nome_conta)
         self.txt_conta_red.bind("<Return>", self._buscar_nome_conta)
+
+        btn_busca_cta = ttk.Button(f_conta, text="🔍", width=3, command=self._abrir_pesquisa_conta)
+        btn_busca_cta.pack(side=tk.LEFT, padx=(3, 0))
 
         self.lbl_nome_conta = ttk.Label(filtro_frame, text="[Todas as Contas]", font=("Segoe UI", 9, "italic"))
         self.lbl_nome_conta.grid(row=0, column=6, padx=6, sticky="w")
@@ -157,6 +166,95 @@ class DebxCredView:
         self.lbl_registros = tk.Label(totais_frame, text="Registros: 0", font=("Segoe UI", 9), bg="#EDF2F7", fg="#4A5568")
         self.lbl_registros.pack(side=tk.RIGHT, padx=10)
 
+    def _abrir_pesquisa_conta(self):
+        """Abre janela de pesquisa de contas contábeis do Alvo (plano_cta) filtrando por empresa."""
+        try:
+            from logon import sessao_usuario_atual
+            emp = sessao_usuario_atual.get("codigo_empresa") or getattr(self.parent, "empresa_ativa", "1.01")
+        except Exception:
+            emp = "1.01"
+
+        modal = tk.Toplevel(self.window)
+        modal.title(f"Pesquisa de Contas Contábeis (Empresa: {emp})")
+        modal.geometry("720x460")
+        modal.minsize(600, 380)
+        modal.transient(self.window)
+        modal.grab_set()
+        centralizar_janela(modal, self.window, 720, 460)
+
+        # Header de busca
+        f_top = ttk.Frame(modal, padding="10")
+        f_top.pack(fill=tk.X)
+
+        ttk.Label(f_top, text="Buscar Conta / Código:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+        var_termo = tk.StringVar()
+        ent_termo = ttk.Entry(f_top, textvariable=var_termo, width=35)
+        ent_termo.pack(side=tk.LEFT, padx=(0, 8))
+        ent_termo.focus_set()
+
+        tree_frame = ttk.Frame(modal, padding="10")
+        tree_frame.pack(fill=tk.BOTH, expand=True)
+
+        cols = ("cod_reduzido", "nome", "cod_estrutural", "tipo")
+        tree_contas = ttk.Treeview(tree_frame, columns=cols, show="headings", selectmode="browse")
+        tree_contas.heading("cod_reduzido", text="Cód. Reduzido")
+        tree_contas.heading("nome", text="Nome da Conta Contábil")
+        tree_contas.heading("cod_estrutural", text="Cód. Estrutural")
+        tree_contas.heading("tipo", text="Tipo")
+
+        tree_contas.column("cod_reduzido", width=110, anchor=tk.CENTER)
+        tree_contas.column("nome", width=340, anchor=tk.W)
+        tree_contas.column("cod_estrutural", width=140, anchor=tk.W)
+        tree_contas.column("tipo", width=60, anchor=tk.CENTER)
+
+        sb_y = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree_contas.yview)
+        tree_contas.configure(yscrollcommand=sb_y.set)
+        tree_contas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sb_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _carregar_contas():
+            tree_contas.delete(*tree_contas.get_children())
+            termo = var_termo.get().strip()
+            contas = self.service.pesquisar_plano_contas(empcod=emp, termo=termo)
+            for c in contas:
+                tree_contas.insert("", tk.END, values=(c["cod_reduzido"], c["nome"], c["cod_estrutural"], c["tipo"]))
+
+        btn_pesq = ttk.Button(f_top, text="🔍 Buscar", command=_carregar_contas)
+        btn_pesq.pack(side=tk.LEFT)
+        ent_termo.bind("<Return>", lambda e: _carregar_contas())
+        ent_termo.bind("<KeyRelease>", lambda e: _carregar_contas())
+
+        def _confirmar():
+            sel = tree_contas.selection()
+            if not sel:
+                messagebox.showwarning("Atenção", "Selecione uma conta na lista.", parent=modal)
+                return
+            valores = tree_contas.item(sel[0], "values")
+            cod_red = valores[0]
+            nome_cta = valores[1]
+            self.txt_conta_red.delete(0, tk.END)
+            self.txt_conta_red.insert(0, cod_red)
+            self.lbl_nome_conta.config(text=f"Conta: {nome_cta}")
+            try:
+                modal.destroy()
+            except Exception:
+                pass
+            return "break"
+
+        tree_contas.bind("<Double-1>", lambda e: (_confirmar(), "break")[1])
+        tree_contas.bind("<Return>", lambda e: (_confirmar(), "break")[1])
+        modal.bind("<Return>", lambda e: (_confirmar(), "break")[1])
+        modal.bind("<Escape>", lambda e: (modal.destroy(), "break")[1])
+
+        f_bottom = ttk.Frame(modal, padding="10")
+        f_bottom.pack(fill=tk.X)
+        btn_conf = ttk.Button(f_bottom, text="✔️ Selecionar", command=_confirmar)
+        btn_conf.pack(side=tk.RIGHT, padx=4)
+        btn_canc = ttk.Button(f_bottom, text="Cancelar (Esc)", command=modal.destroy)
+        btn_canc.pack(side=tk.RIGHT, padx=4)
+
+        _carregar_contas()
+
     def _buscar_nome_conta(self, event=None):
         cod = self.txt_conta_red.get().strip()
         if not cod:
@@ -175,11 +273,10 @@ class DebxCredView:
         for it in self.tree.get_children():
             self.tree.delete(it)
 
-        try:
-            dt_ini = datetime.strptime(self.txt_dt_ini.get().strip(), "%Y-%m-%d").date()
-            dt_fim = datetime.strptime(self.txt_dt_fim.get().strip(), "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Informe as datas no formato AAAA-MM-DD.")
+        dt_ini = parse_data_flexivel(self.txt_dt_ini.get().strip())
+        dt_fim = parse_data_flexivel(self.txt_dt_fim.get().strip())
+        if not dt_ini or not dt_fim:
+            messagebox.showwarning("Data Inválida", "Informe as datas no formato DD/MM/AAAA.")
             return
 
         cod_red = self.txt_conta_red.get().strip() or None

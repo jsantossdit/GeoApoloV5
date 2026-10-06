@@ -137,8 +137,20 @@ object frmcadcategoria: Tfrmcadcategoria
       ShowHint = True
       OnClick = spbsalvarClick
     end
+    object spbnovo: TSpeedButton
+      Left = 52
+      Top = 3
+      Width = 45
+      Height = 39
+      Caption = 'Novo'
+      Hint = 'Novo Registro de Categoria <Ins>'
+      Flat = True
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = spbnovoClick
+    end
     object spbligacoes: TSpeedButton
-      Left = 109
+      Left = 148
       Top = 3
       Width = 45
       Height = 39
@@ -248,7 +260,7 @@ object frmcadcategoria: Tfrmcadcategoria
       ShowHint = True
     end
     object spbsair: TSpeedButton
-      Left = 213
+      Left = 196
       Top = 3
       Width = 45
       Height = 39
@@ -478,8 +490,8 @@ object frmcadcategoria: Tfrmcadcategoria
       OnClick = spbsairClick
     end
     object spblimpar: TSpeedButton
-      Left = 55
-      Top = 5
+      Left = 100
+      Top = 3
       Width = 45
       Height = 39
       Hint = 'Limpa os campos da tela'

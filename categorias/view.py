@@ -52,12 +52,11 @@ class CategoriasEntidadeView(tk.Toplevel):
 
         self.bind("<Escape>", lambda e: self.destroy())
         self.bind("<F5>", lambda e: self._carregar_categorias())
+        self.bind("<Insert>", self._abrir_cadastro_categoria)
 
     def _centralizar_janela(self, largura: int, altura: int):
-        self.update_idletasks()
-        pos_x = (self.winfo_screenwidth() // 2) - (largura // 2)
-        pos_y = (self.winfo_screenheight() // 2) - (altura // 2) - 20
-        self.geometry(f"{largura}x{altura}+{max(pos_x, 0)}+{max(pos_y, 0)}")
+        from core import centralizar_janela
+        centralizar_janela(self, getattr(self, "master", None), largura, altura)
 
     def _aplicar_icone(self):
         caminhos = [
@@ -152,6 +151,9 @@ class CategoriasEntidadeView(tk.Toplevel):
         btn_atualizar = ttk.Button(r_row, text="🔄 Atualizar (F5)", command=self._carregar_categorias)
         btn_atualizar.pack(side=tk.LEFT, padx=4)
 
+        btn_nova_cat = ttk.Button(r_row, text="➕ Nova Categoria (Ins)", command=self._abrir_cadastro_categoria)
+        btn_nova_cat.pack(side=tk.LEFT, padx=4)
+
         # 3. Grid Central de Categorias
         grid_container = ttk.LabelFrame(self, text="Categorias Disponíveis", padding=8)
         grid_container.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=12, pady=5)
@@ -192,6 +194,7 @@ class CategoriasEntidadeView(tk.Toplevel):
         self.tree.tag_configure("nao_vinculada", foreground="#718096")
 
         self.tree.bind("<Double-1>", lambda e: self._acao_vincular_categoria())
+        self.tree.bind("<Insert>", lambda e: self._abrir_cadastro_categoria())
 
         # 4. Rodapé e Ações
         bottom_frame = tk.Frame(self, bg="#E2E8F0", height=46, bd=1, relief=tk.GROOVE)
@@ -201,6 +204,7 @@ class CategoriasEntidadeView(tk.Toplevel):
         btn_box = tk.Frame(bottom_frame, bg="#E2E8F0")
         btn_box.pack(side=tk.LEFT, padx=10, pady=7)
 
+        ttk.Button(btn_box, text="➕ Nova Categoria (Ins)", command=self._abrir_cadastro_categoria).pack(side=tk.LEFT, padx=(0, 4))
         ttk.Button(btn_box, text="✔ Vincular Categoria", command=self._acao_vincular_categoria).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_box, text="🔗 Relacionar Entidades da Categoria", command=self._acao_relacionar_entidades).pack(side=tk.LEFT, padx=4)
         ttk.Button(btn_box, text="🗑 Remover Relacionamento", command=self._acao_remover_relacionamento).pack(side=tk.LEFT, padx=4)
@@ -349,3 +353,12 @@ class CategoriasEntidadeView(tk.Toplevel):
             self._carregar_categorias()
         else:
             messagebox.showerror("Erro", res.mensagem)
+
+    def _abrir_cadastro_categoria(self, event=None):
+        """Abre o formulário de cadastro e manutenção de categorias (FrmCadCategoria)."""
+        from categorias.cadcategoria_view import FrmCadCategoria
+        frm = FrmCadCategoria(self, connection=self._conn, on_salvar=self._carregar_categorias)
+        try:
+            frm.focus_force()
+        except Exception:
+            pass

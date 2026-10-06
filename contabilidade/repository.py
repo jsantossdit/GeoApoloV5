@@ -354,11 +354,46 @@ class ContabilidadeRepository:
 
     def obter_nome_conta_contabil(self, cod_reduzido: str) -> str:
         cursor = self._get_cursor()
-        sql = """
-            SELECT TOP 1 planoctanome
-            FROM plano_cta WITH (NOLOCK)
-            WHERE planoctared = ?
-        """
-        cursor.execute(sql, [cod_reduzido.strip()])
-        r = cursor.fetchone()
-        return str(r[0]).strip() if r else ""
+        cod = cod_reduzido.strip()
+        for col in ("planoctacodred", "planoctared"):
+            try:
+                sql = f"SELECT TOP 1 planoctanome FROM plano_cta WITH (NOLOCK) WHERE {col} = ?"
+                cursor.execute(sql, [cod])
+                r = cursor.fetchone()
+                if r and r[0]:
+                    return str(r[0]).strip()
+            except Exception:
+                continue
+        return ""
+
+    def pesquisar_plano_contas(self, empcod: str, termo: str = "", limite: int = 150) -> List[dict]:
+        """Pesquisa contas analíticas em plano_cta filtrando por empresa e termo."""
+        cursor = self._get_cursor()
+        emp_clean = str(empcod or "").strip()
+        termo_clean = f"%{termo.strip()}%" if termo and termo.strip() else "%"
+
+        for col_red in ("planoctacodred", "planoctared"):
+            try:
+                sql = f"""
+                    SELECT TOP ({limite})
+                        {col_red}, planoctanome, planoctacodestr, planoctatipo
+                    FROM plano_cta WITH (NOLOCK)
+                    WHERE (planoctaempcod = ? OR ? = '')
+                      AND (planoctatipo = 'A' OR planoctatipo IS NULL)
+                      AND (planoctanome LIKE ? OR {col_red} LIKE ? OR planoctacodestr LIKE ?)
+                    ORDER BY planoctacodestr ASC, planoctanome ASC
+                """
+                cursor.execute(sql, [emp_clean, emp_clean, termo_clean, termo_clean, termo_clean])
+                rows = cursor.fetchall()
+                contas = []
+                for r in rows:
+                    contas.append({
+                        "cod_reduzido": str(r[0] or "").strip(),
+                        "nome": str(r[1] or "").strip(),
+                        "cod_estrutural": str(r[2] or "").strip(),
+                        "tipo": str(r[3] or "").strip(),
+                    })
+                return contas
+            except Exception:
+                continue
+        return []

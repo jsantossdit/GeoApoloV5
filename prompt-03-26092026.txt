@@ -1,0 +1,5 @@
+no menu configurações, parametros do sistema, parametros geoapolo/alvo, na aba de regras de integração de entidades, deve se inserir em cada um dos campos o botão
+de busca para cada campo e tabelas ali listadas, precisamos criar também uma aba para configurações do módulo de estoque, o primeiro parâmetro que deverá ter é
+Permite Estoque Negativo: deve ser alimentado como sim ou não, essa validação deve ser checada na opção do geoalvo\controle de estoque quando for atender uma 
+requisição de material ou uma movimentação de saída, deve-se checar conforme o saldo de estoque se ao anteder ficará negativo estando como Sim permite, se tiver como
+não uma mensagem de alerta ao tentar atender a requisição avisando "O sistema não permite estoque negativo, este produto não tem em estoque e não permite movimentação"

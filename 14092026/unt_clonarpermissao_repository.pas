@@ -16,7 +16,6 @@ type
   TClonarPermissaoRepository = class
   private
     FConn: TFDConnection;
-    function ExecutarComando(const ASQL: string; const AParams: array of const): Integer;
   public
     constructor Create(AConnection: TFDConnection);
 

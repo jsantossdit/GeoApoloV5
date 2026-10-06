@@ -32,6 +32,8 @@ wheels/
 *.local
 *.tvsconfig
 *.dproj.local
+*.rsm
+*.log
 
 # Environments
 .env

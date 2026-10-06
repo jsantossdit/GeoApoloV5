@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from typing import Optional, List
 from datetime import date, datetime
+from core import centralizar_janela, vincular_mascara_data, parse_data_flexivel
 from .models import AuditoriaCupomDTO
 from .repository import FiscalRepository
 from .service import FiscalService
@@ -21,10 +22,10 @@ class AuditoriaCuponsView:
 
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Auditoria de Cupons Fiscais (NFC-e)")
-        self.window.geometry("1020x660")
         self.window.minsize(880, 560)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 1020, 660)
 
         self._cupons_atuais: List[AuditoriaCupomDTO] = []
         self._setup_ui()
@@ -60,16 +61,18 @@ class AuditoriaCuponsView:
         btn_procurar.grid(row=0, column=2, padx=5, sticky="w")
 
         # Linha 2 de datas
-        hoje = date.today().strftime("%Y-%m-%d")
+        hoje = date.today().strftime("%d/%m/%Y")
         ttk.Label(param_frame, text="Data Inicial:").grid(row=1, column=0, padx=5, pady=(8, 0), sticky="w")
         self.txt_dt_ini = ttk.Entry(param_frame, width=12)
         self.txt_dt_ini.insert(0, hoje)
         self.txt_dt_ini.grid(row=1, column=1, padx=5, pady=(8, 0), sticky="w")
+        vincular_mascara_data(self.txt_dt_ini)
 
         ttk.Label(param_frame, text="Data Final:").grid(row=1, column=1, padx=(140, 5), pady=(8, 0), sticky="w")
         self.txt_dt_fim = ttk.Entry(param_frame, width=12)
         self.txt_dt_fim.insert(0, hoje)
         self.txt_dt_fim.grid(row=1, column=1, padx=(220, 5), pady=(8, 0), sticky="w")
+        vincular_mascara_data(self.txt_dt_fim)
 
         btn_auditar = tk.Button(
             param_frame,
@@ -171,11 +174,10 @@ class AuditoriaCuponsView:
             return
         self.service._repo.caminho_sqlite = caminho
 
-        try:
-            dt_ini = datetime.strptime(self.txt_dt_ini.get().strip(), "%Y-%m-%d").date()
-            dt_fim = datetime.strptime(self.txt_dt_fim.get().strip(), "%Y-%m-%d").date()
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Informe as datas no formato AAAA-MM-DD.")
+        dt_ini = parse_data_flexivel(self.txt_dt_ini.get().strip())
+        dt_fim = parse_data_flexivel(self.txt_dt_fim.get().strip())
+        if not dt_ini or not dt_fim:
+            messagebox.showwarning("Data Inválida", "Informe as datas no formato DD/MM/AAAA.")
             return
 
         for it in self.tree.get_children():

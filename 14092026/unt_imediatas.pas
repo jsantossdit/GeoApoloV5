@@ -1,4 +1,4 @@
-unit unt_imediatas;
+Ôªøunit unt_imediatas;
 
 interface
 
@@ -104,7 +104,7 @@ begin
          cboconsultas.SetFocus;
          exit;
       end;
-   // rotina de execuÁ„o abaixo
+   // rotina de execu√ß√£o abaixo
    with modulo_dados do
    begin
        if (cboconsultas.ItemIndex <> -1) then
@@ -152,27 +152,53 @@ begin
                                gridimediatas.refresh;
                             end;
                       end
+                   else if cbodatabase.Text = 'SAVIC' then
+                      begin
+                         if not conecta_banco_savic then
+                            Exit;
+
+                         fdquerysql4.Close;
+                         fdquerysql4.Connection := modulo_dados.fdbancosavic;
+                         fdquerysql4.SQL.Clear;
+                         fdquerysql4.SQL.Text := sql;
+                         try
+                            fdquerysql4.Open;
+                            fdquerysql4.FetchAll;
+                            dtsfdquerysql4.DataSet := fdquerysql4;
+                            gridimediatas.DataSource := dtsfdquerysql4;
+                            lblnreg.Caption := IntToStr(fdquerysql4.RecordCount);
+                            gauge1.MaxValue := fdquerysql4.RecordCount;
+                            lblnreg.Refresh;
+                            gridimediatas.Refresh;
+                            gravalog(frmlogon.codigousuario, DateToStr(Date), 'EXECUTOU A CONSULTA ' + QuotedStr(cboconsultas.Text) + ' (SAVIC)');
+                         except
+                            on E: Exception do
+                               MessageDlg('Erro ao executar consulta no SAVIC: ' + E.Message, mtError, [mbOK], 0);
+                         end;
+                      end
                    else if cbodatabase.Text = 'APLICATIVO RCC' then
                       begin
-                         {zbanco.HostName := frmprincipal.servidorapp;
-                         zbanco.Port := strtoint(frmprincipal.portacomunicacao);
-                         zbanco.User := frmprincipal.usuarioapp;
-                         zbanco.Password := frmprincipal.senhaapp;
-                         zbanco.Protocol := 'mysql';
-                         zbanco.Properties.Add('auth_protocol');
-                         zbanco.Properties.Add('caching_sha2_password');
-                         zbanco.Database := frmprincipal.nomebancoapp;
-                         zbanco.Connect; }
-                         //mysql
-                         //executaracao(sql,fdquerysql4);
-                         if fdquerysql4.RecordCount > 0 then
-                            begin
-                               dtsfdquerysql4.DataSet := fdquerysql4;
-                               gridimediatas.DataSource := dtsfdquerysql4;
-                               lblnreg.Caption := inttostr(fdquerysql4.RecordCount);
-                               lblnreg.Refresh;
-                               gridimediatas.Refresh;
-                            end;
+                         if not conecta_banco_app_rcc then
+                            Exit;
+
+                         fdquerysql4.Close;
+                         fdquerysql4.Connection := fdbancoapp;
+                         fdquerysql4.SQL.Clear;
+                         fdquerysql4.SQL.Text := sql;
+                         try
+                            fdquerysql4.Open;
+                            fdquerysql4.FetchAll;
+                            dtsfdquerysql4.DataSet := fdquerysql4;
+                            gridimediatas.DataSource := dtsfdquerysql4;
+                            lblnreg.Caption := IntToStr(fdquerysql4.RecordCount);
+                            gauge1.MaxValue := fdquerysql4.RecordCount;
+                            lblnreg.Refresh;
+                            gridimediatas.Refresh;
+                            gravalog(frmlogon.codigousuario, DateToStr(Date), 'EXECUTOU A CONSULTA ' + QuotedStr(cboconsultas.Text) + ' (APLICATIVO RCC)');
+                         except
+                            on E: Exception do
+                               MessageDlg('Erro ao executar consulta no Aplicativo RCC: ' + E.Message, mtError, [mbOK], 0);
+                         end;
                       end
                    else if cbodatabase.Text = 'K2 - Firebird' then
                       begin
@@ -214,11 +240,11 @@ begin
    begin
      { if (trim(copy(uppercase(sqltxt),1,6)) <> 'SELECT') and (trim(copy(uppercase(sqltxt),1,6)) <> 'INSERT') and (trim(copy(uppercase(sqltxt),1,6)) <> 'DELETE') and (trim(copy(uppercase(sqltxt),1,6)) <> 'UPDATE') then
          begin
-            messagedlg('ESTA N√O … UMA SENTEN«A SQL V¡LIDA !!!',mterror,[mbok],0);
+            messagedlg('ESTA N√ÉO √â UMA SENTEN√áA SQL V√ÅLIDA !!!',mterror,[mbok],0);
             cboconsultas.ItemIndex := -1; cboconsultas.SetFocus;
          end;  }
       flagsql:='0';
-      // FAZ TRATAMENTO DE PAR¬METROS QUE NECESSITEM DE ENTRADA MANUAL
+      // FAZ TRATAMENTO DE PAR√ÇMETROS QUE NECESSITEM DE ENTRADA MANUAL
       for i:= 0 to length(sqltxt) do
       begin
          if copy(sqltxt,i,1) = '|'  then
@@ -236,14 +262,14 @@ begin
                      if varinptbox = '' then
                         varinptbox:='Parametro';
                      resultado:=inputbox('GEOAPOLO',varinptbox,'');
-                     // ROTINA DE MACRO SUBSTITUI«√O
+                     // ROTINA DE MACRO SUBSTITUI√á√ÉO
                      insert(quotedstr(resultado),sqltxt,posini);
                      delete(sqltxt,((posini+2)+length(resultado)),(posfim-posini)+1);
                      posini:=0; posfim:=0; varinptbox:=''; flagsql:='0';
                  end;
             end;
       end;
-      // FAZ TRATAMENTO DE PAR¬METROS FIXOS NUM…RICOS E CARACTERES
+      // FAZ TRATAMENTO DE PAR√ÇMETROS FIXOS NUM√âRICOS E CARACTERES
       for i:= 0 to length(sqltxt) do
       begin
          if copy(sqltxt,i,1) = '['  then
@@ -257,14 +283,14 @@ begin
                      posfim:=pos(']',sqltxt);
                      varinptbox:=buscatroca(varinptbox,'[','');
                      varinptbox:=buscatroca(varinptbox,']','');
-                     // ROTINA DE MACRO SUBSTITUI«√O
+                     // ROTINA DE MACRO SUBSTITUI√á√ÉO
                      insert(quotedstr(varinptbox)+' ',sqltxt,posini);
                      delete(sqltxt,((posini)+length(varinptbox)+2),(posfim-posini)+2);
                      posini:=0; posfim:=0; varinptbox:=''; flagsql:='0';
                  end;
             end;
       end;
-      // FAZ TRATAMENTO DE PAR¬METROS DO TIPO DATA
+      // FAZ TRATAMENTO DE PAR√ÇMETROS DO TIPO DATA
       i:=0;
       for i:=0 to length(sqltxt) do
       begin
@@ -290,7 +316,7 @@ begin
                         resultado:='01/01/1900';
                      resultado:=formatdatetime('yyyy-MM-dd',strtodatetime(resultado));
                      //copy(resultado,4,2)+'/'+copy(resultado,1,2)+'/'+copy(resultado,7,4);
-                     // ROTINA DE MACRO SUBSTITUI«√O
+                     // ROTINA DE MACRO SUBSTITUI√á√ÉO
                      insert(quotedstr(resultado),sqltxt,posini);
                      delete(sqltxt,((posini+2)+length(resultado)),(posfim-posini)+1);
                      posini:=0; posfim:=0; varinptbox:=''; flagsql:='0';
@@ -337,7 +363,7 @@ procedure Tfrmimediatas.FormActivate(Sender: TObject);
 begin
    with modulo_dados do
    begin
-      // indice de configuraÁ„o
+      // indice de configura√ß√£o
       sql:='SELECT indexconsultasimediatas FROM USER_geoapolo_configuracoes';
       fdquerysql.Close;
       fdquerysql.SQL.clear;
@@ -397,30 +423,30 @@ begin
   FieldType:= aTField.ClassName;
   if (FieldType = 'TStringField') or (FieldType = 'TWideStringField') then
     begin
-     { … Texto
-     showmessage('È texto');
+     { √â Texto
+     showmessage('√© texto');
     end;
   if (FieldType = 'TDateField')     or
      (FieldType = 'TDateTimeField') or
      (FieldType = 'TTimeField')     then
     begin
-     { … Data / Data/Hora
-     showmessage('È data hora');
+     { √â Data / Data/Hora
+     showmessage('√© data hora');
     end;
   if (FieldType = 'TIntegerField')  or
-     (FieldType = '¥TSmallIntField') or
+     (FieldType = '¬¥TSmallIntField') or
      (FieldType = 'TLargeintField') then
     begin
-     { … Inteiro
-     showmessage('È inteiro');
+     { √â Inteiro
+     showmessage('√© inteiro');
     end;
   if (FieldType = 'TFloatField')    or
      (FieldType = 'TCurrencyField') or
      (FieldType = 'TBCDField')      or
      (FieldType = 'TFMTBCDField')   then
     begin
-     { … NumÈrico ou Valor
-     showmessage('È valor');
+     { √â Num√©rico ou Valor
+     showmessage('√© valor');
     end;
 end;
                    }
@@ -451,7 +477,7 @@ begin
   else if aTField is TFMTBCDField then
     Result := 'Valor'
   else if aTField is TMemoField then
-    Result := 'Memo' // Tipo especÌfico para campos Memo
+    Result := 'Memo' // Tipo espec√≠fico para campos Memo
   else
     Result := 'Desconhecido';
 end;
@@ -464,7 +490,7 @@ var
 begin
    planilha:= CreateOleObject('Excel.Application');
    planilha.workbooks.add(1);
-   planilha.caption:='ExportaÁ„o de Dados GeoApolo - SDIT';
+   planilha.caption:='Exporta√ß√£o de Dados GeoApolo - SDIT';
    planilha.visible:=true;
 
    with modulo_dados do
@@ -553,29 +579,29 @@ begin
         begin
           if querysql4.Active = false then
              begin
-                messagedlg('EXECUTE PRIMEIRO A CONSULTA DEPOIS REALIZE A EXPORTA«√O !!!',mtwarning,[mbok],0);
+                messagedlg('EXECUTE PRIMEIRO A CONSULTA DEPOIS REALIZE A EXPORTA√á√ÉO !!!',mtwarning,[mbok],0);
                 exit;
              end;
         end;
       //
-      if cbodatabase.Text = 'GEOAPOLO' then
+      if (cbodatabase.Text = 'GEOAPOLO') or (cbodatabase.Text = 'APLICATIVO RCC') then
          begin
           if querysql4.Active = false then
              begin
-                messagedlg('EXECUTE PRIMEIRO A CONSULTA DEPOIS REALIZE A EXPORTA«√O !!!',mtwarning,[mbok],0);
+                messagedlg('EXECUTE PRIMEIRO A CONSULTA DEPOIS REALIZE A EXPORTA√á√ÉO !!!',mtwarning,[mbok],0);
                 exit;
              end;
          end;
        Cont := 2;
        Excel.Workbooks.Add(EmptyParam,0); // Cria um novo documento
-       Excel.Caption := 'Exportando Consulta para o Excel'; /// Mesma funÁ„o do caption de um form
-       Excel.Visible[0] := True;// Se false, o excel ir· rodar em background....
+       Excel.Caption := 'Exportando Consulta para o Excel'; /// Mesma fun√ß√£o do caption de um form
+       Excel.Visible[0] := True;// Se false, o excel ir√° rodar em background....
        if (cbodatabase.Text = 'Apolo') or (cbodatabase.Text = 'Mix') then
           begin
              If(Not(querysql4.Active))Then
                querysql4.Active := True;
           end
-       else if (cbodatabase.Text = 'GEOAPOLO') then
+       else if (cbodatabase.Text = 'GEOAPOLO') or (cbodatabase.Text = 'APLICATIVO RCC') then
           begin
             If(Not(querysql4.Active))Then
                querysql4.Active := True;
@@ -606,7 +632,7 @@ begin
                 End;
              End;
           end
-       else if(cbodatabase.Text = 'GEOAPOLO') then
+       else if (cbodatabase.Text = 'GEOAPOLO') or (cbodatabase.Text = 'APLICATIVO RCC') then
           begin
              for i:= 0 to querysql4.FieldCount -1  do
              begin
@@ -645,13 +671,13 @@ begin
   Try
    if DSPadrao.RecordCount < 1 then
    begin
-     Application.MessageBox('Nenhum registro a ser exportado','AtenÁ„o',MB_OK);
+     Application.MessageBox('Nenhum registro a ser exportado','Aten√ß√£o',MB_OK);
      Exit;
    end;
    Try
      xExcel:= CreateoleObject('Excel.Application');
      xExcel.WorkBooks.add(1);
-     xExcel.caption := 'ExportaÁ„o GeoApolo - SDIT';
+     xExcel.caption := 'Exporta√ß√£o GeoApolo - SDIT';
      xExcel.visible := False;
 
      DSPadrao.DisableControls;
@@ -672,8 +698,8 @@ begin
        Conteudo := DSPadrao.Fields[Lin - 1].Name;
        xExcel.cells[1,Col] := Conteudo;
        {xExcel.Range['A1','Z1'].font.bold := true; // Negrito
-       xExcel.Range['A1','Z1'].Interior.Color := $00D6D6D6; // Cor da CÈlula
-       xExcel.Range['A1','Z1'].RowHeight := 25; //Altura da CÈlula }
+       xExcel.Range['A1','Z1'].Interior.Color := $00D6D6D6; // Cor da C√©lula
+       xExcel.Range['A1','Z1'].RowHeight := 25; //Altura da C√©lula }
      end;
      //xExcel.columns.Autofit;  //Alinhar automaticamete o tamanho da coluna
      xExcel.visible := True;
@@ -719,7 +745,7 @@ begin
             if fdquerysql4.Active = false then
                fdquerysql4.Active := true;
          end
-      else if (cbodatabase.Text = 'GEOAPOLO') then
+      else if (cbodatabase.Text = 'GEOAPOLO') or (cbodatabase.Text = 'APLICATIVO RCC') then
          begin
             if fdquerysql4.Active = false then
                fdquerysql4.Active := true;
@@ -754,7 +780,7 @@ begin
             end;
             closefile(arquivo);
          end
-      else if (cbodatabase.Text = 'GEOAPOLO') then
+      else if (cbodatabase.Text = 'GEOAPOLO') or (cbodatabase.Text = 'APLICATIVO RCC') then
          begin
             linha:='';
             for i:= 0 to fdquerysql4.FieldCount -1 do
@@ -776,7 +802,7 @@ begin
             fdquerysql4.Next;
             end;
             closefile(arquivo);
-            showmessage('EXPORTA«√O CONCLUÕDA !!!');
+            showmessage('EXPORTA√á√ÉO CONCLU√çDA !!!');
          end;
    end;
 end;
@@ -804,7 +830,7 @@ begin
    Sheets      := Calc.Sheets; 
    Sheet       := Sheets.getByIndex(0); 
 
-   // Cria linha de cabeÁalho 
+   // Cria linha de cabe√ßalho 
    i := 0;
    while i <= aDataset.FieldCount - 1 do begin 
          Sheet.getCellByPosition(i,0).setString(aDataset.Fields[i].FieldName); 
@@ -830,7 +856,7 @@ begin
                     Sheet.getCellByPosition(i,j).SetValue(aDataset.Fie0A   Sheets      := Calc.Sheets; 
    Sheet       := Sheets.getByIndex(0); 
 
-   // Cria linha de cabeÁalho 
+   // Cria linha de cabe√ßalho 
    i := 0; 
    while i <= aDataset.FieldCount - 1 do begin 
          Sheet.getCellByPosition(i,0).setString(aDataset.Fields[i].FieldName); 

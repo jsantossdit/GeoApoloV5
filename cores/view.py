@@ -168,10 +168,11 @@ class CoresView(ttk.Frame):
 
 def abrir_janela_cores(parent, connection=None):
     """Abre a tela de cadastro de cores em janela TopLevel."""
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
     win.title("Cores de Produtos - GeoAlvo")
-    win.geometry("680x420")
     win.minsize(560, 320)
+    centralizar_janela(win, parent, 680, 420)
     view = CoresView(win, connection=connection)
     view.pack(fill=tk.BOTH, expand=True)
     return win

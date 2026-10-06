@@ -1,0 +1,20 @@
+na aplicação, coloquei um ícone com o nome faviconrcc.ico, ele deve ser o novo ícone da aplicação.
+na tela de config hoje só tenho condições de configurar um banco de dados, no caso do geoalvo e alvo, contudo preciso promover a integração do geoalvo com um outro
+sistema legado que temos chamado savic, um banco de dados mysql, assim sendo pode preparar na área de config do banco de dados condições para que eu consiga fazer 
+a configuração desse segundo acesso, o acesso ao savic ficará no menu configurações, criar submenus um para Banco Dados GeoAlvo/Alvo e outra para Banco Dados Savic.
+no menu geoapolo temos a opção integrar savic x apolo e dentro importar grupos de oração do savic, trata-se de um formulário que já havia programado ele no delphi que tinha uma programação a qual precisamos revisar para que os dados possam ser inseridos nas tabelas de entidades do geoalvo para posteriormente serem inseridas no alvo via o cadastro de entidades.
+
+O formulário do delphi traz um resumo dos grupos de oração no SAVIC com subtotais em baixo conforme segue:
+
+Quantidade Total de G.O.
+Quantidade G.O. Homologados
+Quantidade G.O. Não homologados
+Quantidade G.O. Em Andamento
+
+o filtro para seleção vem de uma data inicial e final (formatadas como dd/mm/aaa podendo digitar sem tirar a máscara), após digitar a data final e dar enter, o sistema irá  exibir a totalização na label abaixo "Total de Registros Apurados:", os parâmetros de filtros no savic estão no delphi no arquivo unt_importa_atualiza_go_savic_apolo, bem como os parâmetros necessários para configurar o botão conectar-se ao savic.
+
+Para uma melhor compreensão da base savic, primeiro vamos exportar os coordenadores de grupos que tem o mandato ou indeterminado ou com período vigente, a busca se dará pelo cpf, primeiro vai buscar nas tabelas do geoapolo, no caso a tabela user_geoapolo_entidade_documentos onde a busca será por CPF/CNPJ com o cpf do coordenador vindo do savic, se a entidade existir, um update deverá ser dado na tabela do geoapolo user_geoapolo_entidades, caso não exista, um processo de inserção deve ser iniciado e algumas informações são importantes conforme já tratamos na reestruturação do formulário de entidades, 
+
+
+ Uma vez importados, automaticamente o sistema deverá promover a integração local deles via banco de dados, todos os registros de grupo de oração, terão a categoria de entidade padrão que lhe informarei conforme for gerando, mas a primeira que são os grupos de oração, a categoria padrão é: 02.001 e para os coordenadores é quase isso, utiliza-se 02.001.0006, dados que serão inseridos posteriormente em outra consulta, 
+

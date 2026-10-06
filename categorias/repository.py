@@ -4,7 +4,7 @@ Preserva as otimizações SQL Server e hints WITH (NOLOCK).
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from entidades.database import obter_conexao_banco
 
 logger = logging.getLogger(__name__)
@@ -127,3 +127,126 @@ class CategoriaEntidadeRepository:
         if self._conn and hasattr(self._conn, "commit"):
             self._conn.commit()
         return True
+
+    def listar_todas_categorias(self) -> List[Dict[str, Any]]:
+        """Retorna todas as categorias cadastradas na base USER_geoapolo_categoria."""
+        cursor = self._get_cursor()
+        sql = """
+            SELECT
+                geocategcodestr AS codigo,
+                geocategnome AS descricao,
+                ISNULL(geocateggrupo, 'N') AS grupo,
+                ISNULL(geocategcodalt, '') AS codigo_alternativo
+            FROM USER_geoapolo_categoria WITH (NOLOCK)
+            ORDER BY geocategcodestr ASC
+        """
+        try:
+            cursor.execute(sql)
+            cols = [col[0].lower() for col in cursor.description]
+            res = []
+            for row in cursor.fetchall():
+                d = dict(zip(cols, row))
+                if "geocategcodestr" in d and "codigo" not in d:
+                    d["codigo"] = d["geocategcodestr"]
+                if "geocategnome" in d and "descricao" not in d:
+                    d["descricao"] = d["geocategnome"]
+                if "geocateggrupo" in d and "grupo" not in d:
+                    d["grupo"] = d["geocateggrupo"]
+                if "geocategcodalt" in d and "codigo_alternativo" not in d:
+                    d["codigo_alternativo"] = d["geocategcodalt"]
+                res.append(d)
+            return res
+        except Exception as exc:
+            logger.warning("Falha ao listar todas as categorias: %s", exc)
+            return []
+
+    def obter_categoria(self, codigo_estruturado: str) -> Optional[Dict[str, Any]]:
+        """Busca uma categoria específica pelo código estruturado."""
+        cursor = self._get_cursor()
+        sql = """
+            SELECT
+                geocategcodestr AS codigo,
+                geocategnome AS descricao,
+                ISNULL(geocateggrupo, 'N') AS grupo,
+                ISNULL(geocategcodalt, '') AS codigo_alternativo
+            FROM USER_geoapolo_categoria WITH (NOLOCK)
+            WHERE geocategcodestr = ?
+        """
+        try:
+            cursor.execute(sql, [codigo_estruturado])
+            row = cursor.fetchone()
+            if not row:
+                return None
+            cols = [col[0].lower() for col in cursor.description]
+            d = dict(zip(cols, row))
+            if "geocategcodestr" in d and "codigo" not in d:
+                d["codigo"] = d["geocategcodestr"]
+            if "geocategnome" in d and "descricao" not in d:
+                d["descricao"] = d["geocategnome"]
+            if "geocateggrupo" in d and "grupo" not in d:
+                d["grupo"] = d["geocateggrupo"]
+            if "geocategcodalt" in d and "codigo_alternativo" not in d:
+                d["codigo_alternativo"] = d["geocategcodalt"]
+            return d
+        except Exception as exc:
+            logger.warning("Falha ao obter categoria %s: %s", codigo_estruturado, exc)
+            return None
+
+    def obter_proximo_codigo_alternativo(self) -> str:
+        """Obtém o próximo código sequencial de categoria via geoapolo_configcod ou MAX."""
+        try:
+            from core.recursos import geoapolo_configcod
+            cod = geoapolo_configcod("1.01", "USER_geoapolo_categoria", "Sim", connection=self._conn)
+            if cod:
+                return str(cod).strip()
+        except Exception:
+            pass
+
+        cursor = self._get_cursor()
+        try:
+            cursor.execute("""
+                SELECT ISNULL(MAX(CAST(geocategcodalt AS INT)), 0) + 1
+                  FROM USER_geoapolo_categoria WITH (NOLOCK)
+                 WHERE ISNUMERIC(geocategcodalt) = 1
+            """)
+            val = cursor.fetchone()[0]
+            return str(val) if val else "1"
+        except Exception:
+            return "1"
+
+    def salvar_categoria(self, dados: Dict[str, Any], modo_inclusao: bool = True) -> bool:
+        """Insere ou atualiza uma categoria na base USER_geoapolo_categoria."""
+        cursor = self._get_cursor()
+        cod_estr = str(dados.get("codigo") or dados.get("geocategcodestr") or "").strip().upper()
+        nome = str(dados.get("descricao") or dados.get("geocategnome") or "").strip().upper()
+        cod_alt = str(dados.get("codigo_alternativo") or dados.get("geocategcodalt") or "").strip()
+        grupo = "S" if str(dados.get("grupo") or dados.get("geocateggrupo") or "").upper().startswith("S") else "N"
+        cod_antigo = str(dados.get("codigo_antigo") or cod_estr).strip()
+
+        if modo_inclusao:
+            sql = """
+                INSERT INTO USER_geoapolo_categoria (
+                    geocategcodestr, geocategcodalt, geocategnome, geocategcodniv, geocateggrupo, geoempcod
+                ) VALUES (?, ?, ?, 'F', ?, '01')
+            """
+            cursor.execute(sql, [cod_estr, cod_alt, nome, grupo])
+        else:
+            sql = """
+                UPDATE USER_geoapolo_categoria
+                   SET geocategcodestr = ?, geocategcodalt = ?, geocategnome = ?, geocateggrupo = ?
+                 WHERE geocategcodestr = ?
+            """
+            cursor.execute(sql, [cod_estr, cod_alt, nome, grupo, cod_antigo])
+
+        if self._conn and hasattr(self._conn, "commit"):
+            self._conn.commit()
+        return True
+
+    def excluir_categoria(self, codigo_estruturado: str) -> bool:
+        """Remove a categoria pelo código estruturado."""
+        cursor = self._get_cursor()
+        cursor.execute("DELETE FROM USER_geoapolo_categoria WHERE geocategcodestr = ?", [codigo_estruturado])
+        if self._conn and hasattr(self._conn, "commit"):
+            self._conn.commit()
+        return True
+

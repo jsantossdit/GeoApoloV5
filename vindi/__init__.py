@@ -11,6 +11,7 @@ from .models import (
 from .repository import VindiRepository
 from .service import VindiService
 from .view import ConciliacaoVindiView
+from .dashboard_view import DashboardVindiView
 
 __all__ = [
     "TransacaoVindiDTO",
@@ -19,4 +20,5 @@ __all__ = [
     "VindiRepository",
     "VindiService",
     "ConciliacaoVindiView",
+    "DashboardVindiView",
 ]

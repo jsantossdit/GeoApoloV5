@@ -48,10 +48,8 @@ class ClonarPermissoesView(tk.Toplevel):
         self.bind("<Escape>", lambda e: self.destroy())
 
     def _centralizar_janela(self, largura: int, altura: int):
-        self.update_idletasks()
-        pos_x = (self.winfo_screenwidth() // 2) - (largura // 2)
-        pos_y = (self.winfo_screenheight() // 2) - (altura // 2) - 20
-        self.geometry(f"{largura}x{altura}+{max(pos_x, 0)}+{max(pos_y, 0)}")
+        from core import centralizar_janela
+        centralizar_janela(self, getattr(self, "master", None), largura, altura)
 
     def _aplicar_icone(self):
         caminhos = [

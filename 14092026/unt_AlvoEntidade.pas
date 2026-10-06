@@ -101,7 +101,7 @@ type
   TEmail = record
     Operacao : string;
     Sequencia: Integer;
-    Tipo     : string; // ex: 'COM', 'PES', 'NFE'
+    Tipo     : string; // 'Pessoal', 'Comercial', 'Financeiro'
     Url      : string;
     Email    : string;
     Principal: string;
@@ -130,7 +130,7 @@ type
   end;
 
 // ============================================================
-//  RECORD PRINCIPAL ó Entidade
+//  RECORD PRINCIPAL ‚Äî Entidade
 // ============================================================
 
   TEntidade = record
@@ -147,7 +147,7 @@ type
     CodigoOrigem          : string;
     EntidadeDesde         : string;
     DataCadastro          : string;
-    // EndereÁo principal
+    // Endere√ßo principal
     CodigoTipoLograd      : string;
     Endereco              : string;
     NumeroEndereco        : string;
@@ -157,13 +157,13 @@ type
     CodigoCidade          : string;
     Cep                   : string;
     // Fiscal
-    Tipo                  : string; // 'FÌsica' ou 'JurÌdica'
+    Tipo                  : string; // 'F√≠sica' ou 'Jur√≠dica'
     CPFCNPJ               : string;
     RGIE                  : string;
     OrgaoExpedidor        : string;
     Agropecuarista        : string;
     InscricaoAgropecuarista:string;
-    // Regi„o / Status
+    // Regi√£o / Status
     CaixaPostal           : string;
     CodigoRegiao          : string;
     Conceito              : string;
@@ -179,7 +179,7 @@ type
     //InscricaoSuframa      : string;
     //CodigoExcPISCOFINS    : string;
     //MotivoDesoneracaoICMS : string;
-    // ComunicaÁ„o
+    // Comunica√ß√£o
     ComunicacaoEtiqueta     : string;
     ComunicacaoMalaDireta   : string;
     ComunicacaoEmail        : string;
@@ -213,7 +213,7 @@ type
   end;
 
 // ============================================================
-//  CLASSE DE ACESSO ¿ API
+//  CLASSE DE ACESSO √Ä API
 // ============================================================
 
   TAlvoAPI = class
@@ -228,11 +228,13 @@ type
     // Inserir ou Alterar Entidade
     function InserirAlterarEntidade(const AEntidade: TEntidade;
                                     out AMensagem: string): Boolean;
+    function InserirAlterarEntidadeJSON(const APayloadJSON: string;
+                                        out AMensagem: string): Boolean;
     property Token: string read FToken write FToken;
   end;
 
 // ============================================================
-//  FUN«’ES AUXILIARES
+//  FUN√á√ïES AUXILIARES
 // ============================================================
 function DateTimeToISO8601(const ADateTime: TDateTime): string;
 
@@ -379,9 +381,11 @@ begin
   Result.AddPair('Operacao',  Operacao);
   Result.AddPair('Sequencia', TJSONNumber.Create(Sequencia));
   Result.AddPair('Tipo',      Tipo);
+  Result.AddPair('entwebtipo', Tipo);
   Result.AddPair('Url',       Url);
   Result.AddPair('Email',     Email);
-  Result.AddPair('Principal', Principal);
+  Result.AddPair('Principal',        Principal);
+  Result.AddPair('entwebemailprinc', Principal);
   Result.AddPair('NFe',       NFe);
   Result.AddPair('NFSe',      NFSe);
   Result.AddPair('Descricao', Descricao);
@@ -412,11 +416,11 @@ begin
   Result.AddPair('Sequencia',     TJSONNumber.Create(Sequencia));
   Result.AddPair('Arquivo',       Arquivo);
   Result.AddPair('ArquivoBase64', ArquivoBase64);
-  Result.AddPair('Obervacao',     Obervacao); // sem 's' - igual ‡ API
+  Result.AddPair('Obervacao',     Obervacao); // sem 's' - igual √† API
 end;
 
 // ------------------------------------------------------------
-//  TEntidade.ToJSON ó monta o JSON completo
+//  TEntidade.ToJSON ‚Äî monta o JSON completo
 // ------------------------------------------------------------
 
 function TEntidade.ToJSON: TJSONObject;
@@ -453,7 +457,10 @@ begin
   Result.AddPair('Conceito',               Conceito);
   Result.AddPair('CodigoCondPag',          CodigoCondPag);
   Result.AddPair('AlteraCondicaoPagamento', AlteraCondicaoPagamento);
-  Result.AddPair('CodigoTipoCobranca',     CodigoTipoCobranca);
+  if Trim(CodigoTipoCobranca) = '' then
+    Result.AddPair('CodigoTipoCobranca',     '0000027')
+  else
+    Result.AddPair('CodigoTipoCobranca',     CodigoTipoCobranca);
   Result.AddPair('CodigoCargo',            CodigoCargo);
   Result.AddPair('Genero',                 Genero);
   Result.AddPair('ComunicacaoEtiqueta',    ComunicacaoEtiqueta);
@@ -467,7 +474,6 @@ begin
   Result.AddPair('PercentualAcrescimo',    PercentualAcrescimo);
   Result.AddPair('DataValidadeAcrescimo',  TJsonNull.create);
   Result.AddPair('ContatoAposData',        ContatoAposData);
-  Result.AddPair('CodigoRegiao',           CodigoRegiao);
   Result.AddPair('CodigoStatus',           CodigoStatus);
   Result.AddPair('CaracteristicaImovel',   TJSONNumber.Create(CaracteristicaImovel));
   Result.AddPair('DataFundacao',           DataFundacao);
@@ -553,7 +559,7 @@ begin
 end;
 
 // ------------------------------------------------------------
-//  Login ó obtÈm o token JWT
+//  Login ‚Äî obt√©m o token JWT
 // ------------------------------------------------------------
 function TAlvoAPI.Login(const AUsuario, ASenha: string): Boolean;
 var
@@ -573,7 +579,7 @@ begin
     Request.Client    := Client;
     Request.Response  := Response;
     Request.Method    := rmPOST;
-    Request.Resource  := 'Auth/Login'; // ajuste se necess·rio
+    Request.Resource  := 'Auth/Login'; // ajuste se necess√°rio
 
     jBody.AddPair('usuario', AUsuario);
     jBody.AddPair('senha',   ASenha);
@@ -620,7 +626,7 @@ begin
     ConfigurarRequest(Request);
     jBody := AEntidade.ToJSON;
     try
-      // ---- DUMP PARA AN¡LISE ----
+      // ---- DUMP PARA AN√ÅLISE ----
       TFile.WriteAllText('c:\temp\dump_inserir_alterar_entidade.json', jBody.Format(2));
       {Clipboard.AsText := jBody.Format(2);
       ShellExecute(0, 'open', 'notepad.exe',
@@ -631,6 +637,39 @@ begin
     finally
       jBody.Free;
     end;
+    Request.Execute;
+    AMensagem := Response.Content;
+    Result    := Response.StatusCode in [200, 201];
+    if not Result then
+      AMensagem := Format('Erro HTTPS %d: %s',
+                          [Response.StatusCode, Response.Content]);
+  finally
+    Response.Free;
+    Request.Free;
+    Client.Free;
+  end;
+end;
+
+function TAlvoAPI.InserirAlterarEntidadeJSON(const APayloadJSON: string;
+                                              out AMensagem: string): Boolean;
+var
+  Client  : TRESTClient;
+  Request : TRESTRequest;
+  Response: TRESTResponse;
+begin
+  Result    := False;
+  AMensagem := '';
+  Client    := TRESTClient.Create(nil);
+  Request   := TRESTRequest.Create(nil);
+  Response  := TRESTResponse.Create(nil);
+  try
+    Client.BaseURL   := FBaseURL;
+    Request.Client   := Client;
+    Request.Response := Response;
+    Request.Method   := rmPOST;
+    Request.Resource := 'Entidade/InserirAlterarEntidade';
+    ConfigurarRequest(Request);
+    Request.AddBody(APayloadJSON, ctAPPLICATION_JSON);
     Request.Execute;
     AMensagem := Response.Content;
     Result    := Response.StatusCode in [200, 201];

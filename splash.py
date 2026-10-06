@@ -27,8 +27,8 @@ class SplashScreen:
         self.root.bind("<Button-1>", lambda e: self.fechar_splash())
         self.root.bind("<Key>", lambda e: self.fechar_splash())
         
-        # Fechar splash após 4 segundos
-        self._after_id = self.root.after(4000, self.fechar_splash)
+        # Fechar splash rapidamente após 1 segundo (idêntico ao Delphi delay(1))
+        self._after_id = self.root.after(1000, self.fechar_splash)
         
     def criar_splash(self):
         try:
@@ -165,7 +165,7 @@ class SplashScreen:
         try:
             import logon
             app = logon.TelaLogon()
-            app.root.mainloop()
+            app.executar()
         except Exception as e:
             import traceback
             traceback.print_exc()

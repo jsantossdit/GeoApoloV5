@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Imaging.jpeg, Vcl.ExtCtrls,Vcl.Menus,
-    // Suas uses necess�rias (mantidas limpas)
+    // Suas uses necessï¿½rias (mantidas limpas)
   Vcl.Buttons, unt_UIHelper, unt_PermissionManager, unt_fra_StatusBar,Vcl.StdCtrls,unt_logon,
   Registry,frmdashboardvindi;
 type
@@ -23,6 +23,8 @@ type
     mnuprincipal: TMainMenu;
     mnuconfig: TMenuItem;
     mnuconfigdatabase: TMenuItem;
+    mnuconfigbdgeoalvo: TMenuItem;
+    mnuconfigbdsavic: TMenuItem;
     mnuconfigparametros: TMenuItem;
     mnucfgparsisgeoapolo: TMenuItem;
     mnuparversaogeoapolo: TMenuItem;
@@ -141,6 +143,10 @@ type
     procedure mnuconsimediatasexecClick(Sender: TObject);
     procedure spbconsultaClick(Sender: TObject);
     procedure mnuconfigdatabaseClick(Sender: TObject);
+    procedure mnuconfigbdgeoalvoClick(Sender: TObject);
+    procedure mnuconfigbdsavicClick(Sender: TObject);
+    procedure mnugaintegrasavicgoClick(Sender: TObject);
+    procedure mnugaintegrasavic_moderagoClick(Sender: TObject);
     procedure mnucfgparsisgeoapoloClick(Sender: TObject);
     procedure mnuparversaogeoapoloClick(Sender: TObject);
     procedure mnucadusuariosClick(Sender: TObject);
@@ -158,6 +164,8 @@ type
     procedure mnuapoloconciliavindiClick(Sender: TObject);
     procedure mnudashboardvindiClick(Sender: TObject);
     procedure mnucadepartamentosClick(Sender: TObject);
+    procedure mnucadcoresClick(Sender: TObject);
+    procedure mnucadmarcasClick(Sender: TObject);
     procedure mnucadempresasClick(Sender: TObject);
     procedure mnuapoauditoriacuponsClick(Sender: TObject);
     procedure mnutilconsimediatascadconsultaClick(Sender: TObject);
@@ -183,8 +191,8 @@ type
     codigo_empresa,nome_empresa,diraplinstalador,dirinstalacaolocal,servidor_ntp,porta_servidor_ntp,caminhosbackup:string;
     pathfoto,alturafoto,largurafoto,caminhoexclusao,libera_validacao,baseparacampanha,integraentidadesapolo, caminhodabasealvoloja:string;
     servidorapp,portacomunicacao,nomebancoapp,usuarioapp,senhaapp, controle, sql, token_alvo :string;
-    //  Declare estas vari�veis p�blicas no TfrmPrincipal:
-    usucod_apolo : string;   // j� existe no seu c�digo
+    //  Declare estas variï¿½veis pï¿½blicas no TfrmPrincipal:
+    usucod_apolo : string;   // jï¿½ existe no seu cï¿½digo
     //token_alvo   : string;   // NOVO - guarda o JWT entre chamadas
     senha_alvo   : string;   // NOVO - guarda a senha para relogin    
   end;
@@ -205,14 +213,23 @@ uses unt_entidades, funcoes, unt_imediatas, unt_configsysv2,
   unt_auditoriacuponsfiscais, unt_cadconsulta, unt_matchcode, unt_desligafunc,
   unt_clonarpermissao, unt_usuario_ctasfin, unt_debxcred, unt_debxcred_detalhe,
   unt_excluicontabil, unt_usuario_categoria_entidade, unt_categoriaentidade,
-  unt_importainscritos_eventos;
+  unt_importainscritos_eventos, unt_importa_atualiza_go_savic_apolo,
+  unt_moderagrupodeoracao, unt_cadcores, unt_cadmarcas;
 
 procedure Tfrmprincipal.FormActivate(Sender: TObject);
 begin
+   if Trim(frmlogon.codigousuario) = '' then Exit;
    if FJaInicializado then Exit;
-      FJaInicializado := True;
-  // mnupermissoesgrupo.Click ;
+   FJaInicializado := True;
    TPermissionManager.ApplyPermissions(Self, frmlogon.codigousuario);
+
+   // Desabilita menu Alvo se a base não possui integração com o Alvo
+   if integraapolo <> 'S' then
+   begin
+      mnuapolo.Enabled := False;
+      mnuapolo.Visible := False;
+      mnuapolo.Caption := '&Alvo (Não Integrado)';
+   end;
 end;
 
 procedure Tfrmprincipal.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -236,70 +253,70 @@ end;
 procedure Tfrmprincipal.mnuapoctbdebxcredetalheClick(Sender: TObject);
 begin
    application.CreateForm(tfrmdebcred_detalhe, frmdebcred_detalhe);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU D�BITO X CR�DITO CONT�BIL DETALHADO');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU Dï¿½BITO X CRï¿½DITO CONTï¿½BIL DETALHADO');
    frmdebcred_detalhe.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapoloclonarpermissaoClick(Sender: TObject);
 begin
    application.CreateForm(tfrmclonarpermissao, frmclonarpermissao);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU CLONAGEM DE PERMISS�O DE USU�RIOS DO ALVO');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU CLONAGEM DE PERMISSï¿½O DE USUï¿½RIOS DO ALVO');
    frmclonarpermissao.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapoloconciliavindiClick(Sender: TObject);
 begin
    application.CreateForm(tfrmconciliavindi, frmconciliavindi);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU CONCILIA��O VINDI RCC');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU CONCILIAï¿½ï¿½O VINDI RCC');
    frmconciliavindi.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapolocontabdebcredcontaClick(Sender: TObject);
 begin
    application.CreateForm(tfrmdebxcred, frmdebxcred);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU D�BITO X CR�DITO CONT�BIL');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU Dï¿½BITO X CRï¿½DITO CONTï¿½BIL');
    frmdebxcred.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapolodesativausuarioClick(Sender: TObject);
 begin
    application.CreateForm(tfrmdesligafunc, frmdesligafunc);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSO DESLIGAMENTO DE USU�RIOS DO ALVO');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSO DESLIGAMENTO DE USUï¿½RIOS DO ALVO');
    frmdesligafunc.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapoloentidaderelaccategClick(Sender: TObject);
 begin
    application.CreateForm(tfrmrelacentidades, frmrelacentidades);
-   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU RELACIONAMENTO DE USU�RIOS COM CATEGORIAS');
+   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU RELACIONAMENTO DE USUï¿½RIOS COM CATEGORIAS');
    frmrelacentidades.showmodal;
 end;
 
 procedure Tfrmprincipal.mnuapoloexcluilctocontabilClick(Sender: TObject);
 begin
    application.CreateForm(tfrmexcluicontablanc, frmexcluicontablanc);
-   gravalog(frmlogon.CodigoUsuario, datetostr(date),'ACESSOU EXCLUS�O DE LAN�AMENTOS CONT�BEIS');
+   gravalog(frmlogon.CodigoUsuario, datetostr(date),'ACESSOU EXCLUSï¿½O DE LANï¿½AMENTOS CONTï¿½BEIS');
    frmexcluicontablanc.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuapolopermsctafinClick(Sender: TObject);
 begin
    application.CreateForm(tfrmRelacContasFin_usuario, frmRelacContasFin_usuario);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU DE PERMISS�ES PARA CONTAS FINANCEIRAS');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU DE PERMISSï¿½ES PARA CONTAS FINANCEIRAS');
    frmRelacContasFin_usuario.showmodal;
 end;
 
 procedure Tfrmprincipal.mnuapo_ent_rcc_integracongressosClick(Sender: TObject);
 begin
    application.CreateForm(tfrmimportacadastroeventos, frmimportacadastroeventos);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date), 'ACESSOU IMPORTA��O DE PARTICIPANTES EM EVENTOS');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date), 'ACESSOU IMPORTAï¿½ï¿½O DE PARTICIPANTES EM EVENTOS');
    frmimportacadastroeventos.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnucadempresasClick(Sender: TObject);
 begin
    application.CreateForm(tfrmempresa, frmempresa);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSO MANUTEN��O DE CADASTRO DE EMPRESAS');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSO MANUTENï¿½ï¿½O DE CADASTRO DE EMPRESAS');
    frmempresa.showmodal;
 end;
 
@@ -313,8 +330,22 @@ end;
 procedure Tfrmprincipal.mnucadepartamentosClick(Sender: TObject);
 begin
    application.CreateForm(tfrmdepartamentos, frmdepartamentos);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU MANUTEN��O DE DEPARTAMENTOS/EMPRESAS');
+   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU MANUTENï¿½ï¿½O DE DEPARTAMENTOS/EMPRESAS');
    frmdepartamentos.showmodal;
+end;
+
+procedure Tfrmprincipal.mnucadcoresClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmcadcores, frmcadcores);
+   gravalog(frmlogon.CodigoUsuario, datetostr(date), 'ACESSOU CADASTRO DE CORES DE PRODUTOS');
+   frmcadcores.ShowModal;
+end;
+
+procedure Tfrmprincipal.mnucadmarcasClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmcadmarcas, frmcadmarcas);
+   gravalog(frmlogon.CodigoUsuario, datetostr(date), 'ACESSOU CADASTRO DE MARCAS DE PRODUTOS');
+   frmcadmarcas.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnucadeventoscongressosClick(Sender: TObject);
@@ -341,29 +372,57 @@ end;
 procedure Tfrmprincipal.mnucadusuariosClick(Sender: TObject);
 begin
    application.CreateForm(tfrmusuarios, frmusuarios);
-   gravalog(usucod_apolo, datetostr(date),'ACESSOU  CADASTROS DE USU�RIOS GEOAPOLO !!!');
+   gravalog(usucod_apolo, datetostr(date),'ACESSOU  CADASTROS DE USUï¿½RIOS GEOAPOLO !!!');
    frmusuarios.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnucfgparsisgeoapoloClick(Sender: TObject);
 begin
    application.CreateForm(Tfrmconfig, frmconfig);
-   gravalog(usucod_apolo, datetostr(date),'ACESSOU CONFIGURA��O DO SISTEMA !!!');
+   gravalog(usucod_apolo, datetostr(date),'ACESSOU CONFIGURAï¿½ï¿½O DO SISTEMA !!!');
    frmconfig.showmodal;
 end;
 
 procedure Tfrmprincipal.mnuconfigadmusuarioClick(Sender: TObject);
 begin
    application.CreateForm(tfrmusuariosadm,frmusuariosadm);
-   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU FORMUL�RIO DE USU�RIOS ADMINISTRATIVOS');
+   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU FORMULï¿½RIO DE USUï¿½RIOS ADMINISTRATIVOS');
    frmusuariosadm.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuconfigdatabaseClick(Sender: TObject);
 begin
-   application.CreateForm(Tfrmconfigbanco, frmconfigbanco)    ;
-   gravalog(usucod_apolo, datetostr(date),'ACESSOU CONFIGURA��O DE BANCO DE DADOS !!!');
+   mnuconfigbdgeoalvoClick(Sender);
+end;
+
+procedure Tfrmprincipal.mnuconfigbdgeoalvoClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmconfigbanco, frmconfigbanco);
+   frmconfigbanco.AbaInicial := 0;
+   gravalog(usucod_apolo, datetostr(date), 'ACESSOU CONFIGURACAO BANCO GEOALVO/ALVO');
    frmconfigbanco.ShowModal;
+end;
+
+procedure Tfrmprincipal.mnuconfigbdsavicClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmconfigbanco, frmconfigbanco);
+   frmconfigbanco.AbaInicial := 1;
+   gravalog(usucod_apolo, datetostr(date), 'ACESSOU CONFIGURACAO BANCO SAVIC');
+   frmconfigbanco.ShowModal;
+end;
+
+procedure Tfrmprincipal.mnugaintegrasavicgoClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmimporta_atualizaGOSavicGeoApolo, frmimporta_atualizaGOSavicGeoApolo);
+   gravalog(usucod_apolo, datetostr(date), 'ACESSOU IMPORTACAO DE GRUPOS DE ORACAO SAVIC');
+   frmimporta_atualizaGOSavicGeoApolo.ShowModal;
+end;
+
+procedure Tfrmprincipal.mnugaintegrasavic_moderagoClick(Sender: TObject);
+begin
+   application.CreateForm(Tfrmmoderacaogrupodeoracao, frmmoderacaogrupodeoracao);
+   gravalog(usucod_apolo, datetostr(date), 'ACESSOU MODERACAO DE GRUPOS DE ORACAO SAVIC');
+   frmmoderacaogrupodeoracao.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuconfigtrocaempresaClick(Sender: TObject);
@@ -380,7 +439,7 @@ end;
 procedure Tfrmprincipal.mnuconsimediatasexecClick(Sender: TObject);
 begin
    application.CreateForm(tfrmimediatas, frmimediatas);
-   gravalog(usucod_apolo, datetostr(date),'ACESSOU  GERA��O DE CONSULTAS IMEDIATAS !!!');
+   gravalog(usucod_apolo, datetostr(date),'ACESSOU  GERAï¿½ï¿½O DE CONSULTAS IMEDIATAS !!!');
    frmimediatas.showmodal;
 end;
 
@@ -412,35 +471,35 @@ end;
 procedure Tfrmprincipal.mnuparamcodsistemaClick(Sender: TObject);
 begin
    application.Createform(tfrmmancodigosSistema, frmManCodigosSistema);
-   gravalog(frmprincipal.usucod_apolo,datetostr(date),'ENTROU EM CONFIGURA��ES DE C�DIGOS DO SISTEMA');
+   gravalog(frmprincipal.usucod_apolo,datetostr(date),'ENTROU EM CONFIGURAï¿½ï¿½ES DE Cï¿½DIGOS DO SISTEMA');
    frmmancodigossistema.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnuparversaogeoapoloClick(Sender: TObject);
 begin
    application.CreateForm(Tfrmcadnovasversoes, frmcadnovasversoes) ;
-   gravalog(frmprincipal.usucod_apolo,datetostr(date),'LOGON EM MANUTEN��O DE NOVAS VERS�ES !!!');
+   gravalog(frmprincipal.usucod_apolo,datetostr(date),'LOGON EM MANUTENï¿½ï¿½O DE NOVAS VERSï¿½ES !!!');
    frmcadnovasversoes.showmodal;
 end;
 
 procedure Tfrmprincipal.mnupermissoesgrupoClick(Sender: TObject);
 begin
    application.CreateForm(tfrmconfigperfil, frmconfigperfil);
-   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU CONFIGURA��O DE PERFIL DE USU�RIO ');
+   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU CONFIGURAï¿½ï¿½O DE PERFIL DE USUï¿½RIO ');
    frmconfigperfil.ShowModal;
 end;
 
 procedure Tfrmprincipal.mnupermissoesgrupousuariosClick(Sender: TObject);
 begin
    application.createform(tfrmgrupousuarios, frmgrupousuarios);
-   gravalog(frmprincipal.usucod_apolo, datetostr(date),'ACESSOU GERENCIAMENTO DE GRUPOS DE USU�RIOS !!!');
+   gravalog(frmprincipal.usucod_apolo, datetostr(date),'ACESSOU GERENCIAMENTO DE GRUPOS DE USUï¿½RIOS !!!');
    frmgrupousuarios.showmodal;
 end;
 
 procedure Tfrmprincipal.mnurelacionausuariocategentidadeClick(Sender: TObject);
 begin
    application.CreateForm(tfrmusuario_categ_entidade,frmusuario_categ_entidade);
-   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU VINCULO DE USU�RIOS COM ENTIDADES E CATEGORIAS');
+   gravalog(frmlogon.codigousuario,datetostr(date),'ACESSOU VINCULO DE USUï¿½RIOS COM ENTIDADES E CATEGORIAS');
    frmusuario_categ_entidade.ShowModal;
 end;
 
@@ -459,14 +518,14 @@ end;
 procedure Tfrmprincipal.mnutlvalidalicencaClick(Sender: TObject);
 begin
    application.CreateForm(tfrmabout, frmabout);
-   gravalog(frmprincipal.usucod_apolo,datetostr(date),'ACESSOU VALIDA��O DE LICEN�A');
+   gravalog(frmprincipal.usucod_apolo,datetostr(date),'ACESSOU VALIDAï¿½ï¿½O DE LICENï¿½A');
    frmabout.showmodal;
 end;
 
 procedure Tfrmprincipal.spbcadastroentidadesClick(Sender: TObject);
 begin
    application.CreateForm(tfrmentidades, frmentidades);
-   gravalog(frmprincipal.usucod_apolo,datetostr(date),'LOGOU EM CADASTRO E MANUTEN��O DE ENTIDADES !!!');
+   gravalog(frmprincipal.usucod_apolo,datetostr(date),'LOGOU EM CADASTRO E MANUTENï¿½ï¿½O DE ENTIDADES !!!');
    frmentidades.ShowModal;
 end;
 
@@ -487,9 +546,9 @@ end;
 
 procedure Tfrmprincipal.spbtrocaempresaClick(Sender: TObject);
 begin
-   application.CreateForm(tfrmempresa, frmempresa);
-   gravalog(frmlogon.CodigoUsuario,datetostr(date),'ACESSOU SELE��O DE EMPRESAS !!!!');
-   frmempresa.ShowModal;
+   application.CreateForm(Tfrmconfigbanco, frmconfigbanco);
+   gravalog(usucod_apolo, datetostr(date), 'ACESSOU CONFIGURACAO DE BANCO DE DADOS !!!');
+   frmconfigbanco.ShowModal;
 end;
 
 end.

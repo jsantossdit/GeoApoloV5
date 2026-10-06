@@ -155,7 +155,8 @@ class TestAtivoImobilizadoRepository(unittest.TestCase):
             ("codigo_func_responsavel",), ("nome_func_responsavel",),
             ("codigo_da_marca",), ("marca",), ("codigo_status_bem",),
             ("descricao_status_bem",), ("empcod",), ("data_aquisicao",),
-            ("valor_compra",), ("taxa_depreciacao_anual",), ("data_ultima_revisao",),
+            ("quantidade",), ("valor_compra",), ("valor_total",),
+            ("taxa_depreciacao_anual",), ("data_ultima_revisao",),
             ("caminho_foto",), ("observacoes",),
         ]
         mock_cursor.fetchall.return_value = [
@@ -163,11 +164,13 @@ class TestAtivoImobilizadoRepository(unittest.TestCase):
                 "1", "Servidor", "CC01", "TI", "PLA01", "CAT01", "Informática",
                 "CL01", "Hardware", "LOC01", "CPD", "USR01", "Admin",
                 "M01", "Dell", "ST01", "Ativo", "001", "01/01/2022",
-                12000.0, 20.0, "01/01/2023", "", "Em produção"
+                1.0, 12000.0, 12000.0, 20.0, "01/01/2023", "", "Em produção"
             )
         ]
         bens = repo.listar_bens("001")
         self.assertEqual(len(bens), 1)
+        self.assertEqual(bens[0]["quantidade"], 1.0)
+        self.assertEqual(bens[0]["valor_total"], 12000.0)
         sql1 = mock_cursor.execute.call_args[0][0]
         self.assertIn("WITH (NOLOCK)", sql1)
         self.assertIn("USER_geoapolo_satfi_ativoimobilizado", sql1)
@@ -216,6 +219,157 @@ class TestAtivoImobilizadoViewHeadless(unittest.TestCase):
         self.assertIsNotNone(view)
         self.assertTrue(view._modo_inclusao)
         self.assertEqual(view.lbl_modo.cget("text"), "MODO: INCLUSÃO")
+        self.assertIn("1 - ATIVO", view.combo_status["values"])
+        self.assertIn("2 - BAIXADO", view.combo_status["values"])
+        self.assertEqual(view.combo_status.get(), "1 - ATIVO")
+        view.destroy()
+
+    def test_view_resolver_marca_existente(self):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view._map_marca = {"7 - ADOBE": "7", "10 - DELL": "10"}
+        view.combo_marca["values"] = list(view._map_marca.keys())
+
+        # Match direto com rótulo
+        view.combo_marca.set("7 - ADOBE")
+        self.assertEqual(view._resolver_marca_digitada(), "7")
+
+        # Match digitando apenas a descrição
+        view.combo_marca.set("DELL")
+        self.assertEqual(view._resolver_marca_digitada(), "10")
+
+        # Match digitando apenas o código
+        view.combo_marca.set("7")
+        self.assertEqual(view._resolver_marca_digitada(), "7")
+
+        # Vazio
+        view.combo_marca.set("")
+        self.assertEqual(view._resolver_marca_digitada(), "")
+
+        view.destroy()
+
+    @patch("tkinter.messagebox.askyesno", return_value=True)
+    def test_view_resolver_marca_nova_confirmada(self, mock_ask):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view._map_marca = {"7 - ADOBE": "7"}
+        view._service = MagicMock()
+        view._service.obter_ou_criar_marca.return_value = (15, "EPSON", True)
+        view._service.obter_marcas.return_value = [
+            {"codigo": "7", "descricao": "ADOBE"},
+            {"codigo": "15", "descricao": "EPSON"},
+        ]
+
+        view.combo_marca.set("EPSON")
+        cod_res = view._resolver_marca_digitada()
+
+        mock_ask.assert_called_once()
+        view._service.obter_ou_criar_marca.assert_called_once_with("EPSON")
+        self.assertEqual(cod_res, "15")
+        self.assertEqual(view.combo_marca.get(), "15 - EPSON")
+        view.destroy()
+
+    @patch("tkinter.messagebox.askyesno", return_value=False)
+    def test_view_resolver_marca_nova_recusada(self, mock_ask):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view._map_marca = {"7 - ADOBE": "7"}
+        view._service = MagicMock()
+
+        view.combo_marca.set("MARCA INEXISTENTE")
+        cod_res = view._resolver_marca_digitada()
+
+        mock_ask.assert_called_once()
+        view._service.obter_ou_criar_marca.assert_not_called()
+        self.assertIsNone(cod_res)
+    def test_view_calculo_multiplicacao_valores(self):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view.var_quantidade.set("3")
+        view.var_val_compra.set("150,50")
+        view._ao_alterar_valores()
+        self.assertEqual(view.var_val_total.get(), "451,50")
+
+        # Teste inverso: alterando total com quantidade 2 -> valor compra unitário recalculado
+        view.var_quantidade.set("2")
+        view.var_val_total.set("500,00")
+        view._ao_alterar_val_total()
+        self.assertEqual(view.var_val_compra.get(), "250,00")
+        view.destroy()
+
+    def test_view_ao_confirmar_marca_com_codigo(self):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view._map_marca = {"7 - ADOBE": "7", "10 - DELL": "10"}
+        view.combo_marca["values"] = list(view._map_marca.keys())
+
+        view.combo_marca.set("7")
+        view._ao_confirmar_marca()
+        self.assertEqual(view.combo_marca.get(), "7 - ADOBE")
+        view.destroy()
+
+    def test_view_garantir_classificacoes_carregadas(self):
+        if not self.root:
+            self.skipTest("Ambiente sem display/Tk")
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = (1,)
+        mock_conn.cursor.return_value = mock_cursor
+
+        view = AtivoImobilizadoView(self.root, connection=mock_conn, empresa_codigo="001")
+        view._service = MagicMock()
+        view._service.obter_classificacoes.return_value = [
+            {"codigo": "CL01", "descricao": "PANELA DE PRESSAO"},
+            {"codigo": "CL02", "descricao": "PRATO"},
+        ]
+
+        view.combo_classif["values"] = []
+        view._garantir_classificacoes_carregadas()
+        view._service.obter_classificacoes.assert_called()
+        self.assertIn("CL01 - PANELA DE PRESSAO", view.combo_classif["values"])
+        self.assertIn("CL02 - PRATO", view.combo_classif["values"])
         view.destroy()
 
 

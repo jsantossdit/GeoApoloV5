@@ -107,7 +107,7 @@
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <Icon_MainIcon>GeoApolo_Icon5.ico</Icon_MainIcon>
+        <Icon_MainIcon>faviconrcc.ico</Icon_MainIcon>
         <UWP_DelphiLogo44>IconeRCC.png</UWP_DelphiLogo44>
         <UWP_DelphiLogo150>IconeRCC.png</UWP_DelphiLogo150>
         <VerInfo_MajorVer>4</VerInfo_MajorVer>

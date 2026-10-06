@@ -170,7 +170,7 @@ class NomesAmigaveisView(ttk.Frame):
             return
         nome_tec = self.ent_objeto.get().strip()
         if not nome_tec:
-            messagebox.showwarning("Aviso", "Informe ou selecione um objeto técnico.")
+            messagebox.showwarning("Aviso", "Informe ou selecione um objeto técnico.", parent=self)
             return
         sugestao = self.service.sugerir_nome_amigavel(nome_tec)
         self.ent_amigavel.delete(0, tk.END)
@@ -198,18 +198,25 @@ class NomesAmigaveisView(ttk.Frame):
         categ = self.ent_categoria.get().strip() or "Geral"
 
         if not nome_tec:
-            messagebox.showwarning("Aviso", "Nome técnico do objeto é obrigatório.")
+            messagebox.showwarning("Aviso", "Nome técnico do objeto é obrigatório.", parent=self)
             return
 
         dto = ObjetoSistemaDTO(nome_objeto=nome_tec, nome_amigavel=nome_ami, categoria=categ)
         res = self.service.salvar_objeto(dto)
 
         if res.sucesso:
-            messagebox.showinfo("Sucesso", res.mensagem)
+            messagebox.showinfo("Sucesso", res.mensagem, parent=self)
             self.carregar_objetos()
             self._carregar_categorias()
         else:
-            messagebox.showerror("Erro", res.mensagem)
+            messagebox.showerror("Erro", res.mensagem, parent=self)
+
+        try:
+            top = self.winfo_toplevel()
+            top.lift()
+            top.focus_force()
+        except Exception:
+            pass
 
     def _gerar_sugestoes_lote(self):
         if not self.service:
@@ -218,23 +225,60 @@ class NomesAmigaveisView(ttk.Frame):
         if not messagebox.askyesno(
             "Confirmação",
             "Deseja gerar sugestões automáticas de nomes amigáveis para todos os objetos que ainda não foram personalizados?",
+            parent=self,
         ):
             return
 
         res = self.service.gerar_sugestoes_automaticas(apenas_nao_editados=True)
         if res.sucesso:
-            messagebox.showinfo("Sucesso", res.mensagem)
+            messagebox.showinfo("Sucesso", res.mensagem, parent=self)
             self.carregar_objetos()
         else:
-            messagebox.showerror("Erro", res.mensagem)
+            messagebox.showerror("Erro", res.mensagem, parent=self)
+
+        try:
+            top = self.winfo_toplevel()
+            top.lift()
+            top.focus_force()
+        except Exception:
+            pass
+
+
+_janela_nomes_amigaveis_ativa = None
 
 
 def abrir_janela_nomes_amigaveis(parent, connection=None):
-    """Abre a tela de Dicionário de Nomes Amigáveis em janela TopLevel."""
+    """Abre a tela de Dicionário de Nomes Amigáveis em janela TopLevel modal e com instância única."""
+    global _janela_nomes_amigaveis_ativa
+    if _janela_nomes_amigaveis_ativa is not None and _janela_nomes_amigaveis_ativa.winfo_exists():
+        _janela_nomes_amigaveis_ativa.deiconify()
+        _janela_nomes_amigaveis_ativa.lift()
+        _janela_nomes_amigaveis_ativa.focus_force()
+        return _janela_nomes_amigaveis_ativa
+
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
+    _janela_nomes_amigaveis_ativa = win
     win.title("Dicionário de Nomes Amigáveis - GeoAlvo")
-    win.geometry("900x540")
     win.minsize(720, 400)
+    centralizar_janela(win, parent, 900, 540)
+    win.transient(parent)
+    try:
+        win.grab_set()
+    except Exception:
+        pass
+
+    def _ao_fechar():
+        global _janela_nomes_amigaveis_ativa
+        try:
+            win.grab_release()
+        except Exception:
+            pass
+        _janela_nomes_amigaveis_ativa = None
+        win.destroy()
+
+    win.protocol("WM_DELETE_WINDOW", _ao_fechar)
+
     view = NomesAmigaveisView(win, connection=connection)
     view.pack(fill=tk.BOTH, expand=True)
     return win

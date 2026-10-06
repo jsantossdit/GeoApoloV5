@@ -13,6 +13,8 @@ from configuracoes.models import (
 from configuracoes.repository import ConfiguracoesRepository
 from configuracoes.service import ConfiguracoesService
 from configuracoes.view import ConfiguracoesView
+from configuracoes.alvo_api_config import AlvoAPIConfig, carregar_configuracao_alvo, salvar_configuracao_alvo
+from configuracoes.alvo_api_view import FrmConfiguracaoAPIAlvo, abrir_configuracao_api_alvo
 
 __all__ = [
     "ConfiguracaoSistemaDTO",
@@ -24,5 +26,10 @@ __all__ = [
     "ConfiguracoesRepository",
     "ConfiguracoesService",
     "ConfiguracoesView",
+    "AlvoAPIConfig",
+    "carregar_configuracao_alvo",
+    "salvar_configuracao_alvo",
+    "FrmConfiguracaoAPIAlvo",
+    "abrir_configuracao_api_alvo",
 ]
 

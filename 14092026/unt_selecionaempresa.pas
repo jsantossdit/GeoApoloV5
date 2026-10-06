@@ -36,7 +36,7 @@ implementation
 
 {$R *.dfm}
 
-uses unt_dados, funcoes, unt_principal, unt_novidadesversao, unt_logon,
+uses unt_dados, funcoes, unt_principal, unt_novidadesversao, unt_logon, unt_PermissionManager,
   unt_empresa_types, unt_empresa_repository, unt_empresa_service;
 
 function selecionaempresa : string;
@@ -148,6 +148,13 @@ begin
                frmnovidadesversao.rcenovidades.SelStart:=0;
                frmnovidadesversao.ShowModal;
             end;
+      end;
+      TPermissionManager.ApplyPermissions(frmprincipal, frmlogon.codigousuario);
+      if integraapolo <> 'S' then
+      begin
+         frmprincipal.mnuapolo.Enabled := False;
+         frmprincipal.mnuapolo.Visible := False;
+         frmprincipal.mnuapolo.Caption := '&Alvo (Não Integrado)';
       end;
       frmprincipal.Show;
    end;

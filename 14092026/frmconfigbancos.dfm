@@ -241,9 +241,9 @@ object frmconfigbanco: Tfrmconfigbanco
       Top = 8
       Width = 48
       Height = 35
-      Hint = 'Conectar Banco'
-      Enabled = False
+      Hint = 'Testar Conex'#227'o do Banco'
       Flat = True
+      OnClick = spbconectabancoClick
       Glyph.Data = {
         EE030000424DEE03000000000000360000002800000012000000110000000100
         180000000000B8030000C30E0000C30E00000000000000000000BFBFBFBFBFBF
@@ -696,6 +696,280 @@ object frmconfigbanco: Tfrmconfigbanco
           TabOrder = 1
           Text = ''
           OnKeyUp = lblusuariobanco1KeyUp
+        end
+      end
+    end
+    object tab_bancosavic: TTabSheet
+      Caption = 'Banco Dados Savic (MySQL)'
+      object GroupBoxSavic: TGroupBox
+        Left = 6
+        Top = 2
+        Width = 451
+        Height = 335
+        Caption = '   Configurador Acesso ao Banco Savic (Legado)   '
+        Ctl3D = False
+        ParentCtl3D = False
+        TabOrder = 0
+        object lblsavic_servidor: TLabeledEdit
+          Left = 3
+          Top = 46
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 247
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Nome ou IP do Servidor MySQL Savic:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 0
+          Text = '191.252.53.94'
+        end
+        object lblsavic_porta: TLabeledEdit
+          Left = 280
+          Top = 46
+          Width = 100
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 63
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Porta TCP:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 1
+          Text = '3306'
+        end
+        object lblsavic_banco: TLabeledEdit
+          Left = 3
+          Top = 100
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 196
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Nome da Base de Dados Savic:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 2
+          Text = 'rccbrasilsavic'
+        end
+        object lblsavic_usuario: TLabeledEdit
+          Left = 3
+          Top = 154
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 145
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Usu'#225'rio do Banco Savic:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 3
+          Text = 'rccbrasilsavic'
+        end
+        object lblsavic_senha: TLabeledEdit
+          Left = 3
+          Top = 208
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 138
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Senha do Banco Savic:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          PasswordChar = '*'
+          TabOrder = 4
+          Text = 'b2J4earCJuNcM7'
+        end
+      end
+    end
+    object tab_bancoapp: TTabSheet
+      Caption = 'Banco Dados Aplicativo RCC (MySQL)'
+      object GroupBoxApp: TGroupBox
+        Left = 6
+        Top = 2
+        Width = 451
+        Height = 335
+        Caption = '   Configurador Acesso ao Banco do Aplicativo RCC (MySQL)   '
+        Ctl3D = False
+        ParentCtl3D = False
+        TabOrder = 0
+        object lblapp_servidor: TLabeledEdit
+          Left = 3
+          Top = 46
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 260
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Nome ou IP do Servidor MySQL Aplicativo:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 0
+        end
+        object lblapp_porta: TLabeledEdit
+          Left = 280
+          Top = 46
+          Width = 100
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 63
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Porta TCP:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 1
+          Text = '3306'
+        end
+        object lblapp_banco: TLabeledEdit
+          Left = 3
+          Top = 100
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 217
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Nome da Base de Dados Aplicativo:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 2
+        end
+        object lblapp_usuario: TLabeledEdit
+          Left = 3
+          Top = 154
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 166
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Usu'#225'rio do Banco Aplicativo:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          TabOrder = 3
+        end
+        object lblapp_senha: TLabeledEdit
+          Left = 3
+          Top = 208
+          Width = 263
+          Height = 23
+          Ctl3D = False
+          EditLabel.Width = 159
+          EditLabel.Height = 17
+          EditLabel.Caption = 'Senha do Banco Aplicativo:'
+          EditLabel.Font.Charset = ANSI_CHARSET
+          EditLabel.Font.Color = clWindowText
+          EditLabel.Font.Height = -15
+          EditLabel.Font.Name = 'Times New Roman'
+          EditLabel.Font.Style = []
+          EditLabel.ParentFont = False
+          Font.Charset = ANSI_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -15
+          Font.Name = 'Times New Roman'
+          Font.Style = []
+          ParentCtl3D = False
+          ParentFont = False
+          PasswordChar = '*'
+          TabOrder = 4
         end
       end
     end

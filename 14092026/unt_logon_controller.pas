@@ -41,6 +41,7 @@ type
 
     function DefinirCredenciaisAlvo(const ALogin, ACodApoloLink,
       ASenhaAlvoPlano: string; out AMensagemErro: string): Boolean;
+    function UsuarioExiste(const ALogin: string): Boolean;
   end;
 
 implementation
@@ -160,6 +161,13 @@ begin
       AMensagemErro := E.Message;
     end;
   end;
+end;
+
+function TLogonController.UsuarioExiste(const ALogin: string): Boolean;
+begin
+  Result := False;
+  if Assigned(FAutenticador) then
+    Result := FAutenticador.UsuarioExiste(ALogin);
 end;
 
 end.

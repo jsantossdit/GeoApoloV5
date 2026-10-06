@@ -3,7 +3,7 @@ unit unt_consultav3_service;
 interface
 
 uses
-  System.SysUtils, System.Classes, FireDAC.Comp.Client,
+  System.SysUtils, System.Classes, System.StrUtils, FireDAC.Comp.Client,
   unt_consultav3_types, unt_consultav3_repository;
 
 type

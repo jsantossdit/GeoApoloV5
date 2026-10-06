@@ -5124,7 +5124,7 @@ object frmprincipal: Tfrmprincipal
       Top = 0
       Width = 65
       Height = 65
-      Hint = 'Troca a Empresa selecionada'
+      Hint = 'Configura'#231#245'es'
       Flat = True
       Glyph.Data = {
         F6060000424DF606000000000000360000002800000018000000180000000100
@@ -5192,7 +5192,7 @@ object frmprincipal: Tfrmprincipal
       Top = 0
       Width = 65
       Height = 65
-      Hint = 'Cadastro de Entidades'
+      Hint = 'Entidades'
       Flat = True
       Glyph.Data = {
         F6060000424DF606000000000000360000002800000018000000180000000100
@@ -5636,7 +5636,7 @@ object frmprincipal: Tfrmprincipal
       Top = 13
       Width = 45
       Height = 39
-      Hint = 'Executar Consultas no Sistema'
+      Hint = 'Consultas Imediatas'
       Flat = True
       Glyph.Data = {
         36100000424D3610000000000000360000002800000020000000200000000100
@@ -5838,7 +5838,14 @@ object frmprincipal: Tfrmprincipal
           FFFFFFFFFFFFFFFEFEFEFDFDFDFCFCFCFCFCFCFCFCFCFCFCFCFCFCFCFCFCFCFD
           FDFDFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
         Caption = 'Banco de Dados'
-        OnClick = mnuconfigdatabaseClick
+        object mnuconfigbdgeoalvo: TMenuItem
+          Caption = 'Banco Dados &Geo Alvo / Alvo'
+          OnClick = mnuconfigbdgeoalvoClick
+        end
+        object mnuconfigbdsavic: TMenuItem
+          Caption = 'Banco Dados &Savic'
+          OnClick = mnuconfigbdsavicClick
+        end
       end
       object mnuconfigparametros: TMenuItem
         Bitmap.Data = {
@@ -7013,7 +7020,7 @@ object frmprincipal: Tfrmprincipal
           FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
           FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
         Caption = '&Estoque'
-        Enabled = False
+        Enabled = True
         object mnucadcores: TMenuItem
           Bitmap.Data = {
             36030000424D3603000000000000360000002800000010000000100000000100
@@ -7043,6 +7050,7 @@ object frmprincipal: Tfrmprincipal
             C0C0C0C0C0C0C04040403F3F3F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F00
             007F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7F303030}
           Caption = '&Cores'
+          OnClick = mnucadcoresClick
         end
         object mnucadmarcas: TMenuItem
           Bitmap.Data = {
@@ -7073,6 +7081,7 @@ object frmprincipal: Tfrmprincipal
             BF0000FF0000BFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
           Caption = '&Marcas'
+          OnClick = mnucadmarcasClick
         end
         object mnucadprodutos: TMenuItem
           Bitmap.Data = {
@@ -7230,7 +7239,7 @@ object frmprincipal: Tfrmprincipal
       end
     end
     object mnugeoapolo: TMenuItem
-      Caption = 'GeoApolo'
+      Caption = 'GeoAlvo'
       object mnugeoapoloativofixoti: TMenuItem
         Caption = 'Ativo &Fixo'
         Enabled = False
@@ -7365,7 +7374,7 @@ object frmprincipal: Tfrmprincipal
         end
       end
       object mnugeosavic: TMenuItem
-        Caption = 'Integra'#231#245'es &Savic RCC'
+        Caption = 'Integrar &SAVIC x Alvo'
         object mnugaintegrasavicgo: TMenuItem
           Bitmap.Data = {
             F6060000424DF606000000000000360000002800000018000000180000000100
@@ -7424,7 +7433,8 @@ object frmprincipal: Tfrmprincipal
             A08464E4DBD2FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE2D9CEA78B6BA0
             8462A08462A08464E7E0D8FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
-          Caption = 'Importa Grupos de Ora'#231#227'o (&GO) Savic'
+          Caption = 'Importar Grupos de Ora'#231#227'o do SAVIC'
+          OnClick = mnugaintegrasavicgoClick
         end
         object mnugaintegrasavic_moderago: TMenuItem
           Bitmap.Data = {
@@ -7485,6 +7495,7 @@ object frmprincipal: Tfrmprincipal
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}
           Caption = '&Modera'#231#227'o de Grupos de Ora'#231#227'o Savic x Apolo'
+          OnClick = mnugaintegrasavic_moderagoClick
         end
         object mnugeosavicvalidaorigem: TMenuItem
           Bitmap.Data = {

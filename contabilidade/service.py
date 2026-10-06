@@ -109,3 +109,6 @@ class ContabilidadeService:
         if not cod:
             return ""
         return self._repo.obter_nome_conta_contabil(cod)
+
+    def pesquisar_plano_contas(self, empcod: str, termo: str = "") -> List[dict]:
+        return self._repo.pesquisar_plano_contas(empcod, termo)

@@ -106,7 +106,13 @@ class UsuariosService:
                 id_gerado=usucod_limpo
             )
         except Exception as e:
-            return ResultadoOperacaoUsuario(False, f"Erro ao excluir usuário: {str(e)}")
+            msg_erro = str(e)
+            if any(term in msg_erro.lower() for term in ["reference constraint", "foreign key", "conflitou com a restri", "integrityerror", "constraint"]):
+                return ResultadoOperacaoUsuario(
+                    False,
+                    f"Caso o usuário possua histórico de movimentação, não será permitida a exclusão do mesmo."
+                )
+            return ResultadoOperacaoUsuario(False, f"Erro ao excluir usuário: {msg_erro}")
 
     def listar_departamentos(self, empcod: str = "") -> List[DepartamentoDTO]:
         return self._repo.listar_departamentos(empcod)
@@ -165,7 +171,13 @@ class UsuariosService:
             self._repo.excluir_grupo(codigo_grupo.strip().upper())
             return ResultadoOperacaoUsuario(True, "Grupo excluído com sucesso.")
         except Exception as e:
-            return ResultadoOperacaoUsuario(False, f"Erro ao excluir grupo: {str(e)}")
+            msg_erro = str(e)
+            if any(term in msg_erro.lower() for term in ["reference constraint", "foreign key", "conflitou com a restri", "integrityerror", "constraint"]):
+                return ResultadoOperacaoUsuario(
+                    False,
+                    "Caso o grupo possua vínculos no sistema, não será permitida a exclusão do mesmo."
+                )
+            return ResultadoOperacaoUsuario(False, f"Erro ao excluir grupo: {msg_erro}")
 
     def listar_usuarios_grupo(self, codigo_grupo: str) -> List[VinculoGrupoUsuarioDTO]:
         if not codigo_grupo or not codigo_grupo.strip():
@@ -209,3 +221,15 @@ class UsuariosService:
             return ResultadoOperacaoUsuario(True, msg)
         except Exception as e:
             return ResultadoOperacaoUsuario(False, f"Erro ao atualizar permissão: {str(e)}")
+
+    def sincronizar_catalogo_completo(self, empresa: str = "1") -> ResultadoOperacaoUsuario:
+        """Sincroniza o catálogo completo de objetos, menus e barras de ferramentas com o banco de dados."""
+        try:
+            qtd = self._repo.sincronizar_ou_inicializar_objetos(empresa=empresa)
+            return ResultadoOperacaoUsuario(
+                True,
+                f"Catálogo sincronizado com sucesso! {qtd} objeto(s) inserido(s) ou atualizado(s)."
+            )
+        except Exception as e:
+            return ResultadoOperacaoUsuario(False, f"Erro ao sincronizar catálogo de objetos: {str(e)}")
+

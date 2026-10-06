@@ -1,0 +1,25 @@
+o botão dashboard & IA na barra de ferramentas pode ser removido, visto que o dash tem dois botões na área de trabalho do aplicativo, atribuir o dashboard de doações
+para a empresa 1.01 Escritório Nacional, depois vamos criar outros para as outras empresas.
+
+na área de trabalho do aplicativo, quando trocar de empresa, por exemplo sair da empresa 1.01 e for para 1.02 ou 1.03 ou qualquer outro número, verificar se há
+dashboard criado para empresa, se houver disponibiliza o painel conforme na empresa 1.01 mas do contrário pode ocultar a informação.
+
+Na barra de ferramentas, pode adicionar mais um botão, para nova requisição de material, pode procurar na internet um icone que traduza a função e colocar na tooltip
+do botão o texto "Nova Requisição de Material"
+
+No menu principal \ configurações \ banco de dados, criar uma opção para configurar o banco de dados do aplicativo, é mais um mysql, disponibilizar os mesmos campos 
+do savic mysql, no menu principal \ utilitários\ cadastros de consultas e consultas imediatas, quando selecionar o banco como Aplicativo RCC, restaurar em segundo plano 
+as configurações e alimentar a conexão para buscar dados na base do aplicativo, tratar todos os erros padrões quando não se consegue acessar, exibir a msg de erros
+de forma mais clara possível.
+
+os botões imprimir e config no menu principal podem ser removidos, o botão imprimir pode ser colocado antes do funil de consultas imediatas, com o icone de uma 
+impressora que pode localizar na internet
+
+analisar mas não precisa implementar agora, esses dias instalou um pacote para gerar pdf dos relatórios, contudo o exe compilado dobrou de tamanho, peço sua análise
+se existe um pacote que gere um pdf mas que isso não implique na dobra do tamanho do exe, pois fica muito pesado.
+
+em utilitários \ Validação de Licenças, pode trazer do delphi a rotina que permitia somente ao usuário JULIO ver uma combo com a lista de todos os usuários ativos 
+um text com a senha criptografada e um botão para descriptografá-la, mas isso somente para o usuário indicado.
+
+no menu principal \ cadastros \ crm, a opção cadastro de eventos tem um & antes de eventos que pode ser removido.e:
+

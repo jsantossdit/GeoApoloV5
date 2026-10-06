@@ -102,5 +102,35 @@ class TestCoreEmailService(unittest.TestCase):
         self.assertFalse(resultado)
 
 
+class TestCentralizarJanela(unittest.TestCase):
+
+    def test_centralizar_janela_com_parent(self):
+        from core import centralizar_janela
+
+        janela = MagicMock()
+        janela.winfo_screenwidth.return_value = 1920
+        janela.winfo_screenheight.return_value = 1080
+
+        parent = MagicMock()
+        parent.winfo_width.return_value = 1200
+        parent.winfo_height.return_value = 800
+        parent.winfo_rootx.return_value = 100
+        parent.winfo_rooty.return_value = 50
+
+        centralizar_janela(janela, parent, largura=800, altura=600)
+        janela.geometry.assert_called_once_with("800x600+300+150")
+
+    def test_centralizar_janela_sem_parent(self):
+        from core import centralizar_janela
+
+        janela = MagicMock()
+        janela.master = None
+        janela.winfo_screenwidth.return_value = 1920
+        janela.winfo_screenheight.return_value = 1080
+
+        centralizar_janela(janela, None, largura=800, altura=600)
+        janela.geometry.assert_called_once_with("800x600+560+220")
+
+
 if __name__ == "__main__":
     unittest.main()

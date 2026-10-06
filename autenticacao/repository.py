@@ -30,14 +30,27 @@ class AutenticacaoRepository:
     def _nolock(self) -> str:
         return "WITH (NOLOCK)" if self._is_sql_server else ""
 
+    def _obter_colunas(self, nome_tabela: str) -> set:
+        try:
+            cursor = self._get_cursor()
+            cursor.execute(f"SELECT * FROM {nome_tabela} WHERE 1=0")
+            if cursor.description:
+                return {desc[0].lower() for desc in cursor.description}
+        except Exception:
+            pass
+        return set()
+
     def obter_usuario_login(self, login: str) -> Optional[dict]:
         """Localiza o usuário por login ou código de acesso."""
         cursor = self._get_cursor()
         nolock = self._nolock()
         login_limpo = (login or "").strip().lower()
 
+        cols = self._obter_colunas("USER_geoapolo_usuarios")
+        campo_senha_alvo = "senha_alvo" if "senha_alvo" in cols else "'' AS senha_alvo"
+
         sql = f"""
-            SELECT usucod, login, nome_completo, flagativo, senha, senha_alvo
+            SELECT usucod, login, nome_completo, flagativo, senha, {campo_senha_alvo}
             FROM USER_geoapolo_usuarios {nolock}
             WHERE LOWER(login) = ? OR LOWER(usucod) = ?
         """

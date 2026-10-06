@@ -928,7 +928,9 @@ object frmimediatas: Tfrmimediatas
       OnKeyUp = cbodatabaseKeyUp
       Items.Strings = (
         'ALVO'
-        'GEOAPOLO')
+        'GEOAPOLO'
+        'SAVIC'
+        'APLICATIVO RCC')
     end
   end
   object StatusBar1: TStatusBar

@@ -128,3 +128,36 @@ class ConfiguracoesService:
 
         return self._repo.testar_conexao_socket(config.servidor, config.porta, config.timeout)
 
+    # -------------------------------------------------------------------------
+    # MÉTODOS DE BUSCA E APOIO PARA REGRAS DE INTEGRAÇÃO
+    # -------------------------------------------------------------------------
+    def buscar_entidades(self, termo: str = "") -> list:
+        return self._repo.buscar_entidades(termo)
+
+    def obter_nome_entidade(self, entcod: str) -> str:
+        return self._repo.obter_nome_entidade(entcod)
+
+    def buscar_origens(self, modo_integra: str = "Integra", termo: str = "") -> list:
+        return self._repo.buscar_origens(modo_integra, termo)
+
+    def obter_nome_origem(self, modo_integra: str, origcodestr: str) -> str:
+        return self._repo.obter_nome_origem(modo_integra, origcodestr)
+
+    def buscar_motivos_ocorrencia(self, modo_integra: str = "Integra", termo: str = "") -> list:
+        return self._repo.buscar_motivos_ocorrencia(modo_integra, termo)
+
+    def obter_nome_motivo_ocorrencia(self, modo_integra: str, motocorcodestr: str) -> str:
+        return self._repo.obter_nome_motivo_ocorrencia(modo_integra, motocorcodestr)
+
+    def buscar_categorias_parceiras(self, modo_integra: str = "Integra", termo: str = "") -> list:
+        return self._repo.buscar_categorias_parceiras(modo_integra, termo)
+
+    def obter_nome_categoria(self, modo_integra: str, geocategcodestr: str) -> str:
+        return self._repo.obter_nome_categoria(modo_integra, geocategcodestr)
+
+    def permite_estoque_negativo(self, empresa_codigo: str) -> bool:
+        """Verifica se os parâmetros do sistema permitem estoque negativo para a empresa."""
+        dados = self.obter_parametros(empresa_codigo)
+        v = str(dados.get("permite_estoque_negativo", "Nao")).strip()
+        return v in ("Sim", "S", "1", "True", "true")
+

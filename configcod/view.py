@@ -186,10 +186,11 @@ class ManutencaoCodigosView(ttk.Frame):
 
 def abrir_manutencao_codigos_sistema(parent, connection=None):
     """Abre a tela de Manutenção de Códigos do Sistema em janela TopLevel."""
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
     win.title("Manutenção de Códigos do Sistema - GeoAlvo")
-    win.geometry("820x480")
     win.minsize(680, 360)
+    centralizar_janela(win, parent, 820, 480)
     view = ManutencaoCodigosView(win, connection=connection)
     view.pack(fill=tk.BOTH, expand=True)
     return win

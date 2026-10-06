@@ -45,7 +45,9 @@ class AtivoImobilizadoDTO:
     codigo_status_bem: str = ""
     descricao_status_bem: str = ""
     data_aquisicao: Optional[str] = None
+    quantidade: float = 1.0
     valor_compra: float = 0.0
+    valor_total: float = 0.0
     taxa_depreciacao_anual: float = 0.0
     data_ultima_revisao: Optional[str] = None
     caminho_foto: str = ""

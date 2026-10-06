@@ -1,0 +1,28 @@
+====================================================================================================
+RELATÓRIO COMPLETO DE OCORRÊNCIAS DA INTEGRAÇÃO SAVIC x ALVO - GRUPOS DE ORAÇÃO
+Data e Hora da Execução : 04/10/2026 23:21:03
+Período Apurado         : 01/01/2026 a 31/01/2026
+Total Registros Apurados: 1
+====================================================================================================
+
+--- [1] REGISTROS INSERIDOS / ATUALIZADOS EM USER_GEOAPOLO_ENTIDADE (TOTAL: 0) ---
+Nenhum registro foi gravado na tabela USER_geoapolo_entidade.
+
+====================================================================================================
+
+--- [2] REGISTROS GRAVADOS APENAS EM USER_GEOAPOLO_GRUPOSDEORACAO (TOTAL: 1) ---
+[0001] GO ID: GO-100 | Nome: G.O. Jesus Misericordioso | Cidade/UF: CAMPINAS - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade (CAMPINAS - SP) | Status: Gravado apenas em USER_geoapolo_gruposdeoracao
+
+====================================================================================================
+
+--- [3] RESUMO GERAL E TOTALIZADORES ---
+- Total de Registros Apurados no SAVIC: 1
+- Grupos Inseridos em Grupos de Oração: 1
+- Grupos Atualizados em Grupos de Oração: 0
+- Entidades Inseridas em USER_geoapolo_entidade: 0
+- Entidades Atualizadas em USER_geoapolo_entidade: 0
+- Registros Restritos a Grupos de Oração (Ocorrências): 1
+- Coordenadores Inseridos: 1
+- Coordenadores Atualizados: 0
+- Total de Erros / Exceções: 0
+====================================================================================================

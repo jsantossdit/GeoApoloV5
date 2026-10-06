@@ -136,11 +136,12 @@ class SobreSistemaDialog(tk.Toplevel):
     """Janela 'Sobre o GeoAlvo / GeoApolo' com metadados do sistema e da estação."""
 
     def __init__(self, parent=None, service: Optional[AutenticacaoService] = None, connection=None):
+        from core import centralizar_janela
         super().__init__(parent)
         self.title("Sobre o GeoAlvo")
-        self.geometry("540x360")
         self.minsize(460, 300)
         self.transient(parent)
+        centralizar_janela(self, parent, 540, 360)
         self.service = service
 
         if self.service is None:

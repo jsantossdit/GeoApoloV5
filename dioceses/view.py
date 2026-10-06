@@ -29,12 +29,13 @@ class RelacionaDioceseEntidadeView:
         self.service = service or DiocesesService(DiocesesRepository())
 
         if parent is not None:
+            from core import centralizar_janela
             self.window = tk.Toplevel(parent)
             self.window.title("GeoAlvo - Relacionamento de Entidades RCC x Dioceses CNBB")
-            self.window.geometry("1100x720")
             self.window.minsize(980, 620)
             self.window.transient(parent)
             self.window.grab_set()
+            centralizar_janela(self.window, parent, 1100, 720)
         else:
             self.window = None
 
@@ -420,9 +421,14 @@ class RelacionaDioceseEntidadeView:
             self.txt_dio_id.insert(0, str(vals[0]))
             self.txt_dio_nome.delete(0, tk.END)
             self.txt_dio_nome.insert(0, str(vals[1]))
-            modal.destroy()
+            try:
+                modal.destroy()
+            except Exception:
+                pass
+            return "break"
 
-        grid_dio.bind("<Double-1>", lambda e: confirmar_selecao())
+        grid_dio.bind("<Double-1>", lambda e: (confirmar_selecao(), "break")[1])
+        grid_dio.bind("<Return>", lambda e: (confirmar_selecao(), "break")[1])
 
         btn_sel = ttk.Button(modal, text="✓ Selecionar Diocese", command=confirmar_selecao)
         btn_sel.pack(side=tk.RIGHT, padx=15, pady=10)

@@ -11,6 +11,7 @@ from .models import (
 from .repository import CategoriaEntidadeRepository
 from .service import CategoriaEntidadeService
 from .view import CategoriasEntidadeView
+from .cadcategoria_view import FrmCadCategoria
 
 __all__ = [
     "CategoriaResumoDTO",
@@ -20,4 +21,5 @@ __all__ = [
     "CategoriaEntidadeRepository",
     "CategoriaEntidadeService",
     "CategoriasEntidadeView",
+    "FrmCadCategoria",
 ]

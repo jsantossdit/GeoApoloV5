@@ -456,9 +456,64 @@ object frmentidades: Tfrmentidades
         C130D8E9EC00D8E9EC00D8E9EC00D8E9EC00D8E9EC00D8E9EC00}
       ParentShowHint = False
       ShowHint = True
+      OnClick = spblimparClick
+    end
+    object spbexportarlote: TSpeedButton
+      Left = 320
+      Top = 5
+      Width = 145
+      Height = 36
+      Caption = 'Exportar em Lote'
+      Flat = True
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clNavy
+      Font.Height = -13
+      Font.Name = 'Times New Roman'
+      Font.Style = [fsBold]
+      Hint = 'Exporta em lote todas as Entidades abaixo para o Alvo'
+      ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = spbexportarloteClick
+    end
+    object spbfiltroavancado: TSpeedButton
+      Left = 472
+      Top = 5
+      Width = 135
+      Height = 36
+      Caption = 'Filtro Avan'#231'ado'
+      Flat = True
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -13
+      Font.Name = 'Times New Roman'
+      Font.Style = [fsBold]
+      Hint = 'Abre o painel de Filtro Avan'#231'ado Multi-Campos'
+      ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = spbfiltroavancadoClick
+    end
+    object spbnovo: TSpeedButton
+      Left = 615
+      Top = 5
+      Width = 105
+      Height = 36
+      Caption = 'Novo <Ins>'
+      Flat = True
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clNavy
+      Font.Height = -13
+      Font.Name = 'Times New Roman'
+      Font.Style = [fsBold]
+      Hint = 'Incluir Nova Entidade <Insert>'
+      ParentFont = False
+      ParentShowHint = False
+      ShowHint = True
+      OnClick = spbnovoClick
     end
     object lblsair: TLabel
-      Left = 355
+      Left = 730
       Top = 16
       Width = 138
       Height = 16
@@ -807,7 +862,7 @@ object frmentidades: Tfrmentidades
     end
     object gridentidades: TDBGrid
       Left = 3
-      Top = -8
+      Top = 0
       Width = 1262
       Height = 432
       Font.Charset = ANSI_CHARSET
@@ -1149,6 +1204,290 @@ object frmentidades: Tfrmentidades
       Items.Strings = (
         'GeoApolo'
         'Alvo')
+    end
+  end
+  object pnlFiltroAvancado: TPanel
+    Left = 8
+    Top = 113
+    Width = 1043
+    Height = 275
+    BevelInner = bvRaised
+    BevelOuter = bvLowered
+    BorderWidth = 1
+    Color = 16185078
+    ParentBackground = False
+    TabOrder = 5
+    Visible = False
+    object pnlFiltroTopo: TPanel
+      Left = 3
+      Top = 3
+      Width = 1037
+      Height = 72
+      Align = alTop
+      BevelOuter = bvNone
+      Color = 16185078
+      ParentBackground = False
+      TabOrder = 0
+      object lblFiltroTitulo: TLabel
+        Left = 8
+        Top = 5
+        Width = 265
+        Height = 16
+        Caption = 'Filtro Avan'#231'ado Multi-Campos (GeoApolo)'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clNavy
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
+      object lblFiltroConector: TLabel
+        Left = 8
+        Top = 27
+        Width = 49
+        Height = 15
+        Caption = 'Conector'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+      end
+      object lblFiltroCampo: TLabel
+        Left = 70
+        Top = 27
+        Width = 36
+        Height = 15
+        Caption = 'Campo'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+      end
+      object lblFiltroOperador: TLabel
+        Left = 286
+        Top = 27
+        Width = 49
+        Height = 15
+        Caption = 'Operador'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+      end
+      object lblFiltroValor: TLabel
+        Left = 444
+        Top = 27
+        Width = 27
+        Height = 15
+        Caption = 'Valor'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -12
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+      end
+      object btnFecharFiltroAvancado: TButton
+        Left = 955
+        Top = 4
+        Width = 76
+        Height = 22
+        Caption = 'Fechar [X]'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clMaroon
+        Font.Height = -11
+        Font.Name = 'Times New Roman'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 0
+        OnClick = btnFecharFiltroAvancadoClick
+      end
+      object cboFiltroConector: TComboBox
+        Left = 8
+        Top = 43
+        Width = 56
+        Height = 23
+        Style = csDropDownList
+        ItemIndex = 0
+        TabOrder = 1
+        Text = 'E'
+        Items.Strings = (
+          'E'
+          'OU')
+      end
+      object cboFiltroCampo: TComboBox
+        Left = 70
+        Top = 43
+        Width = 210
+        Height = 23
+        Style = csDropDownList
+        TabOrder = 2
+        Items.Strings = (
+          'Categoria (Nome)'
+          'Categoria (C'#243'digo)'
+          'C'#243'digo Alvo (entcod)'
+          'Status Exporta'#231#227'o Alvo (atualizou_apolo)'
+          'Nome da Entidade'
+          'Nome Fantasia'
+          'CPF / CNPJ'
+          'RG / IE'
+          'Cidade'
+          'Estado (UF)'
+          'Bairro'
+          'CEP'
+          'G'#234'nero'
+          'Estado Civil'
+          'Observa'#231#245'es')
+      end
+      object cboFiltroOperador: TComboBox
+        Left = 286
+        Top = 43
+        Width = 152
+        Height = 23
+        Style = csDropDownList
+        TabOrder = 3
+        Items.Strings = (
+          'Cont'#233'm'
+          'N'#227'o Cont'#233'm'
+          'Igual a'
+          'Diferente de'
+          'Come'#231'a com'
+          'Termina com'
+          'Est'#225' Vazio / Nulo'
+          'N'#227'o Est'#225' Vazio')
+      end
+      object edtFiltroValor: TEdit
+        Left = 444
+        Top = 43
+        Width = 240
+        Height = 23
+        TabOrder = 4
+      end
+      object btnAdicionarCondicao: TButton
+        Left = 692
+        Top = 41
+        Width = 108
+        Height = 27
+        Caption = '+ Adicionar'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 5
+        OnClick = btnAdicionarCondicaoClick
+      end
+      object btnRemoverCondicao: TButton
+        Left = 806
+        Top = 41
+        Width = 108
+        Height = 27
+        Caption = '- Remover'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 6
+        OnClick = btnRemoverCondicaoClick
+      end
+      object btnLimparCondicoes: TButton
+        Left = 920
+        Top = 41
+        Width = 110
+        Height = 27
+        Caption = 'Limpar Tudo'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 7
+        OnClick = btnLimparCondicoesClick
+      end
+    end
+    object gridCondicoes: TStringGrid
+      Left = 3
+      Top = 75
+      Width = 1037
+      Height = 152
+      Align = alClient
+      ColCount = 4
+      DefaultRowHeight = 20
+      FixedCols = 0
+      RowCount = 2
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRowSelect, goColSizing]
+      TabOrder = 1
+      ColWidths = (
+        70
+        250
+        170
+        520)
+    end
+    object pnlFiltroRodape: TPanel
+      Left = 3
+      Top = 227
+      Width = 1037
+      Height = 45
+      Align = alBottom
+      BevelOuter = bvNone
+      Color = 16185078
+      ParentBackground = False
+      TabOrder = 2
+      object btnAtalhoGOPendentes: TButton
+        Left = 8
+        Top = 8
+        Width = 320
+        Height = 31
+        Caption = #11088' Atalho: GO Ativos N'#227'o Exportados p/ Alvo'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clGreen
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 0
+        OnClick = btnAtalhoGOPendentesClick
+      end
+      object btnRestaurarFiltroPadrao: TButton
+        Left = 338
+        Top = 8
+        Width = 175
+        Height = 31
+        Caption = 'Restaurar Padr'#227'o'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 1
+        OnClick = btnRestaurarFiltroPadraoClick
+      end
+      object btnAplicarFiltroAvancado: TButton
+        Left = 818
+        Top = 8
+        Width = 212
+        Height = 31
+        Caption = #128269' Aplicar Filtro no Grid'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clNavy
+        Font.Height = -13
+        Font.Name = 'Times New Roman'
+        Font.Style = [fsBold]
+        ParentFont = False
+        TabOrder = 2
+        OnClick = btnAplicarFiltroAvancadoClick
+      end
     end
   end
   object Panel2: TPanel

@@ -4,6 +4,7 @@ program GeoApolo;
 
 uses
   Vcl.Forms,
+  System.SysUtils,
   unt_PermissionManager in 'unt_PermissionManager.pas',
   unt_UIHelper in 'unt_UIHelper.pas',
   unt_dados in 'unt_dados.pas' {modulo_dados: TDataModule},
@@ -23,6 +24,13 @@ uses
   unt_statusbarclock in 'unt_statusbarclock.pas',
   unt_relacionadioceseentidade in 'unt_relacionadioceseentidade.pas' {frmrelacionaentidadediocese},
   unt_cadcores in 'unt_cadcores.pas' {frmcadcores},
+  unt_cadcores_types in 'unt_cadcores_types.pas',
+  unt_cadcores_repository in 'unt_cadcores_repository.pas',
+  unt_cadcores_service in 'unt_cadcores_service.pas',
+  unt_cadmarcas_types in 'unt_cadmarcas_types.pas',
+  unt_cadmarcas_repository in 'unt_cadmarcas_repository.pas',
+  unt_cadmarcas_service in 'unt_cadmarcas_service.pas',
+  unt_cadmarcas in 'unt_cadmarcas.pas' {frmcadmarcas},
   unt_corrigecidadedistrito in 'unt_corrigecidadedistrito.pas' {frmdistritocidades},
   unt_debxcred in 'unt_debxcred.pas' {frmdebxcred},
   unt_debxcred_detalhe in 'unt_debxcred_detalhe.pas' {frmdebcred_detalhe},
@@ -100,13 +108,20 @@ uses
   unt_manativoimobilizado_service in 'unt_manativoimobilizado_service.pas',
   unt_clonarpermissao_types in 'unt_clonarpermissao_types.pas',
   unt_clonarpermissao_repository in 'unt_clonarpermissao_repository.pas',
-  unt_clonarpermissao_service in 'unt_clonarpermissao_service.pas';
+  unt_clonarpermissao_service in 'unt_clonarpermissao_service.pas',
+  unt_importa_atualiza_go_savic_apolo in 'unt_importa_atualiza_go_savic_apolo.pas' {frmimporta_atualizaGOSavicGeoApolo},
+  unt_moderagrupodeoracao in 'unt_moderagrupodeoracao.pas' {frmmoderacaogrupodeoracao},
+  unt_mapeamento_savic_entidade in 'unt_mapeamento_savic_entidade.pas' {frmmapeamento_savic_entidade};
 
 {$R *.res}
 
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
+  if FileExists(ExtractFilePath(Application.ExeName) + 'faviconrcc.ico') then
+    Application.Icon.LoadFromFile(ExtractFilePath(Application.ExeName) + 'faviconrcc.ico')
+  else if FileExists('faviconrcc.ico') then
+    Application.Icon.LoadFromFile('faviconrcc.ico');
   frmsplash:=tfrmsplash.create(application);
   frmsplash.lblnumeroversao.caption := frmsplash.lblnumeroversao.caption+'   '+getbuildinfo;
   setcursorsql('sql');

@@ -130,6 +130,7 @@ type
     { Grava usucod_apolo e senha_alvo (criptografando a senha em texto puro com a chave 35) }
     function DefinirDadosAlvo(const ALogin, ACodApoloLink,
       ASenhaAlvoPlano: string): Boolean;
+    function UsuarioExiste(const ALogin: string): Boolean;
   end;
 
   { ------------------------------------------------------------------ }
@@ -178,6 +179,7 @@ type
     { Grava usuario/senha do sistema alvo quando usucod_apolo ainda nao esta configurado }
     function DefinirCredenciaisAlvo(const ALogin, ACodApoloLink,
       ASenhaAlvoPlano: string; out AMensagemErro: string): Boolean;
+    function UsuarioExiste(const ALogin: string): Boolean;
   end;
 
 implementation

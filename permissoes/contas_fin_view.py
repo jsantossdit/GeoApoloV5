@@ -18,12 +18,13 @@ class UsuarioContasFinView:
         self.parent = parent
         self.service = service or PermissoesService(PermissoesRepository())
 
+        from core import centralizar_janela
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Permissão em Contas Financeiras")
-        self.window.geometry("820x620")
         self.window.minsize(750, 550)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 820, 620)
 
         self._todas_contas: List[ContaFinanceiraDTO] = []
         self._setup_ui()

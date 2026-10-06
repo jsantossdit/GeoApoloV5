@@ -44,10 +44,8 @@ class RelatoriosView(tk.Toplevel):
         self.bind("<F5>", lambda e: self._carregar_dados_previa())
 
     def _centralizar_janela(self, largura: int, altura: int):
-        self.update_idletasks()
-        pos_x = (self.winfo_screenwidth() // 2) - (largura // 2)
-        pos_y = (self.winfo_screenheight() // 2) - (altura // 2) - 20
-        self.geometry(f"{largura}x{altura}+{max(pos_x, 0)}+{max(pos_y, 0)}")
+        from core import centralizar_janela
+        centralizar_janela(self, getattr(self, "master", None), largura, altura)
 
     def _aplicar_icone(self):
         caminhos = [
@@ -171,13 +169,18 @@ class RelatoriosView(tk.Toplevel):
         btn_box = tk.Frame(bottom_frame, bg="#E2E8F0")
         btn_box.pack(side=tk.LEFT, padx=10, pady=7)
 
+        self.btn_pdf = ttk.Button(
+            btn_box, text="📕 Exportar PDF", command=self._exportar_pdf
+        )
+        self.btn_pdf.pack(side=tk.LEFT, padx=4)
+
         self.btn_excel = ttk.Button(
             btn_box, text="📊 Exportar Excel (.xlsx)", command=self._exportar_excel
         )
         self.btn_excel.pack(side=tk.LEFT, padx=4)
 
         self.btn_html = ttk.Button(
-            btn_box, text="🖨 Visualizar / Imprimir (PDF)", command=self._exportar_html
+            btn_box, text="🖨 Visualizar no Navegador", command=self._exportar_html
         )
         self.btn_html.pack(side=tk.LEFT, padx=4)
 
@@ -264,6 +267,31 @@ class RelatoriosView(tk.Toplevel):
             self.lbl_status.config(
                 text=f"Exibindo: {total_filtrados} de {total_orig} registros."
             )
+
+    def _exportar_pdf(self):
+        dados_para_exportar = self._dados_filtrados if self._dados_filtrados else self._dados_originais
+        if not dados_para_exportar:
+            messagebox.showwarning("Atenção", "Nenhum dado disponível para exportação em PDF.")
+            return
+
+        caminho = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("Documento PDF", "*.pdf")],
+            title="Salvar Relatório em PDF",
+            initialfile=f"Relatorio_{self._obter_tipo_selecionado().name}.pdf",
+        )
+        if not caminho:
+            return
+
+        try:
+            RelatorioGenerator.gerar_pdf(dados_para_exportar, self.combo_tipo.get(), caminho)
+            if messagebox.askyesno("Sucesso", f"Relatório PDF exportado com sucesso em:\n{caminho}\n\nDeseja abrir o arquivo agora?"):
+                try:
+                    os.startfile(caminho)
+                except Exception as ex_open:
+                    logger.warning("Não foi possível abrir o arquivo automaticamente: %s", ex_open)
+        except Exception as exc:
+            messagebox.showerror("Erro ao Exportar", f"Falha ao gerar arquivo PDF:\n{exc}")
 
     def _exportar_excel(self):
         dados_para_exportar = self._dados_filtrados if self._dados_filtrados else self._dados_originais

@@ -1,0 +1,22 @@
+no formulário de moderação de grupo de oração, quando for selecionar um estado na combo, permitir que eu digite a letra inicial da sigla do estado e ele já posicione
+a combo no primeiro registro, ao dar duplo click sobre um coordenador do grupo de oração, quando for trazer a ficha financeira dele, somente registros da empresa
+(empcod) 1.01 e 1.03 serão válidos, a empresa 1.02 é venda comercial.
+
+
+a rotina de exportação dos grupos de oração e coordenadores não está funcionando, pois temos casos como por exemplo de JÚLIO DIAS DE LIMA com cpf 318830871 que diz ter exportado 
+mas não encontrei o cpf na tabela user_geoapolo_entidade_documentos, assim para gravar grupos de oração ou coordenador temos que alimentar as tabelas:
+
+select * from user_geoapolo_entidade
+select * from USER_geoapolo_entcateg
+select * from USER_geoapolo_entidade_ativecon
+select * from USER_geoapolo_entidade_comunicacao
+select * from USER_geoapolo_entidade_contato
+select * from USER_geoapolo_entidade_documentos
+select * from USER_geoapolo_entidade_endereco_adicionais
+select * from USER_geoapolo_entidade_webcontato
+
+por favor grave um passo a passo da exportação da seguinte forma:
+
+grupo de oração: salvar código, categoria e código da entidade geoapolo
+coordenador: código do grupo, código do coordenador como entidade geoapolo
+

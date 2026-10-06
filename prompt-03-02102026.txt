@@ -1,0 +1,18 @@
+no formulário de requisição de material, criar dois campos, um para o código do solicitante, um botão buscar e a frente uma label para trazer o nome do solicitante, 
+este cadastro será o de usuários do geoalvo, um usuário logado poderá abrir requisições para outra pessoa, mas deve informar o centro de custo e solicitante.
+
+em cadastro \ ativo fixo, habilitar a opção de categoria de bens e pode usar o formulário delphi como modelo, também no mesmo menu, habilitar o formulário de 
+localização física seguindo a mesma lógica do formulário delphi.
+
+em cadastro \ ativo imobilizado, quando abre o formulário, limpar os campos de classificação e localização organizacional, para assim listar todos os bens já
+cadastrados sem filtros
+
+criar no módulo de estoque, primeiro em cadastros \ estoque \ a opção para cadastrar almoxarifados, como cadastro básico de código, uma descrição do almoxarifado,
+o centro de custo a que ele pertence, data de criação, um campo text para descrever a finalidade a que se destina aquele almoxarifado, deixar na pasta do executável 
+um arquivo texto .sql com os comandos para criar a tabela user_geoapolo_produtos_almoxarifados, quando for fazer uma movimentação de estoque, deverá ser obrigatório
+nos primeiros campos informar o almoxarifado, devendo ter um campo de código, um botão buscar que deverá listar todos os almoxarifados cadastrados no banco, devemos
+estar atentos que um produto poderá existir em mais de um almoxarifado, assim devemos ter um controle de estoque por data em cada almoxarifado, o cadastro de 
+produto é único, mas no formulário poderei vincular ele a vários almoxarifados, ao final devemos criar relatórios para municiar o usuário dos beneficios das 
+recentes aquisições que lançamos.
+
+ao final deve atualizar o executável

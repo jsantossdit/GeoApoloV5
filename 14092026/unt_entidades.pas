@@ -1,4 +1,4 @@
-﻿unit unt_entidades;
+unit unt_entidades;
 
 interface
 
@@ -8,7 +8,7 @@ uses
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP, System.UITypes,
   IdIOHandler, IdIOHandlerSocket, IdIOHandlerStack, IdSSL, IdSSLOpenSSL,
   System.JSON, FireDAC.Comp.Client, FireDAC.Stan.Param, System.IOUtils, DateUtils,
-  uIntegradorGeoApolo, FireDAC.Stan.Option, Vcl.Mask, Clipbrd;
+  uIntegradorGeoApolo, FireDAC.Stan.Option, Vcl.Mask, Clipbrd, System.RegularExpressions, unt_AlvoEntidade, System.StrUtils;
 
 type
   Tfrmentidades = class(TForm)
@@ -19,6 +19,9 @@ type
     spblimpar: TSpeedButton;
     lblsair: TLabel;
     spbexcluir: TSpeedButton;
+    spbexportarlote: TSpeedButton;
+    spbfiltroavancado: TSpeedButton;
+    spbnovo: TSpeedButton;
     StatusBar1: TStatusBar;
     GroupBox1: TGroupBox;
     GroupBox7: TGroupBox;
@@ -54,6 +57,26 @@ type
     spbsobrepoealvo: TBitBtn;
     btnignoraralvo: TBitBtn;
     StringGrid1: TStringGrid;
+    pnlFiltroAvancado: TPanel;
+    pnlFiltroTopo: TPanel;
+    lblFiltroTitulo: TLabel;
+    lblFiltroConector: TLabel;
+    lblFiltroCampo: TLabel;
+    lblFiltroOperador: TLabel;
+    lblFiltroValor: TLabel;
+    btnFecharFiltroAvancado: TButton;
+    cboFiltroConector: TComboBox;
+    cboFiltroCampo: TComboBox;
+    cboFiltroOperador: TComboBox;
+    edtFiltroValor: TEdit;
+    btnAdicionarCondicao: TButton;
+    btnRemoverCondicao: TButton;
+    btnLimparCondicoes: TButton;
+    gridCondicoes: TStringGrid;
+    pnlFiltroRodape: TPanel;
+    btnAtalhoGOPendentes: TButton;
+    btnRestaurarFiltroPadrao: TButton;
+    btnAplicarFiltroAvancado: TButton;
     procedure FormActivate(Sender: TObject);
     procedure spbsairClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -76,6 +99,17 @@ type
     procedure spbsobrepoealvoClick(Sender: TObject);
     procedure lblprocurarporKeyPress(Sender: TObject; var Key: Char);
     procedure spbexportaentidadesClick(Sender: TObject);
+    procedure spblimparClick(Sender: TObject);
+    procedure spbexportarloteClick(Sender: TObject);
+    procedure spbfiltroavancadoClick(Sender: TObject);
+    procedure spbnovoClick(Sender: TObject);
+    procedure btnFecharFiltroAvancadoClick(Sender: TObject);
+    procedure btnAdicionarCondicaoClick(Sender: TObject);
+    procedure btnRemoverCondicaoClick(Sender: TObject);
+    procedure btnLimparCondicoesClick(Sender: TObject);
+    procedure btnAtalhoGOPendentesClick(Sender: TObject);
+    procedure btnRestaurarFiltroPadraoClick(Sender: TObject);
+    procedure btnAplicarFiltroAvancadoClick(Sender: TObject);
   private
     FCarregandoEntidades: Boolean;
     FJaAtivou: Boolean;
@@ -83,6 +117,15 @@ type
     procedure MontarTelaComparacao(QuerySVE, QueryBanco: TFDQuery);
     procedure SelectCell(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
     procedure ConfigurarGridCompleto(const NomeBase: string);
+    function DeterminarTipoTratamento(const AGenero, AEstadoCivil: string): string;
+    function ObterCodigoTipoTratamento(const AAbreviatura: string): string;
+    function ObterCodigoRegiaoPorUF(const AUF: string): string;
+    function GarantirAutenticacaoAlvo(AAPI: TAlvoAPI): Boolean;
+    function GarantirContatoIntegradoAlvo(const AGeoEntCod: string; API: TAlvoAPI; out AEntCodContato: string; out AErro: string): Boolean;
+    function MontarEntidadeParaEnvio(const AGeoEntCod: string; out AEntidade: TEntidade; out ATratCod: string): Boolean;
+    procedure AtualizarEntidadeExportada(const AGeoEntCod, ANovoEntCod, ATratCod: string);
+    procedure InicializarFiltroAvancado;
+    procedure AplicarFiltroAvancadoSQL(const AWhereClause: string);
   public
     filhossimnao, wordem, integraentidadeapolo, falecido, sexo, logradouro,
     codgrauescolar, grauescolaridade, vgeoentcod, ventcod: string;
@@ -142,7 +185,7 @@ function ExtrairConjunto(const Texto: string; Indice: Integer): string; export;
 implementation
 
 uses funcoes, unt_dados, unt_logon, unt_cadentidades, unt_principal,
-  unt_selecionaempresa, unt_statusbarclock, unt_AlvoEntidade;
+  unt_selecionaempresa, unt_statusbarclock;
 
 {$R *.dfm}
 
@@ -499,399 +542,921 @@ begin
 end;
 
 // =============================================================================
-// spbexportaentidadesClick — mantido igual ao original
+// ExtrairEntCodResposta: parser robusto para capturar código do Alvo
+// =============================================================================
+function ExtrairEntCodResposta(const AMsg: string): string;
+var
+  jVal: TJSONValue;
+  jObj, jEnt: TJSONObject;
+  vStr: string;
+  Match: TMatch;
+begin
+  Result := '';
+  if Trim(AMsg) = '' then Exit;
+
+  try
+    jVal := TJSONObject.ParseJSONValue(AMsg);
+    if (jVal <> nil) and (jVal is TJSONObject) then
+    begin
+      jObj := TJSONObject(jVal);
+      try
+        if jObj.TryGetValue<string>('entcod', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        if jObj.TryGetValue<string>('EntCod', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        if jObj.TryGetValue<string>('codigo', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        if jObj.TryGetValue<string>('Codigo', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        if jObj.TryGetValue<string>('id', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        if jObj.TryGetValue<string>('Id', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+
+        if jObj.TryGetValue<TJSONObject>('Entidade', jEnt) or jObj.TryGetValue<TJSONObject>('entidade', jEnt) then
+        begin
+          if jEnt.TryGetValue<string>('entcod', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+          if jEnt.TryGetValue<string>('EntCod', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+          if jEnt.TryGetValue<string>('codigo', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+          if jEnt.TryGetValue<string>('Codigo', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+          if jEnt.TryGetValue<string>('id', vStr) and (Trim(vStr) <> '') then Exit(Trim(vStr));
+        end;
+      finally
+        jVal.Free;
+      end;
+    end;
+  except
+  end;
+
+  try
+    Match := TRegEx.Match(AMsg, '(?:entidade|código|codigo|cód|cod)\s*(?:n[ºo°\.]*)?\s*:?\s*(\d+)', [roIgnoreCase]);
+    if Match.Success and (Match.Groups.Count > 1) then
+      Exit(Match.Groups[1].Value);
+
+    Match := TRegEx.Match(AMsg, '"(?:entcod|codigo|id)"\s*:\s*"?(\d+)"?', [roIgnoreCase]);
+    if Match.Success and (Match.Groups.Count > 1) then
+      Exit(Match.Groups[1].Value);
+  except
+  end;
+end;
+
+// =============================================================================
+// Helper: DeterminarTipoTratamento
+// Regra:
+//   M -> 'Sr.'
+//   F -> se estado civil preenchido e Casada / União Estável -> 'Sra.', senão -> 'Srta.'
+// =============================================================================
+function Tfrmentidades.DeterminarTipoTratamento(const AGenero, AEstadoCivil: string): string;
+var
+  g, ec: string;
+begin
+  g  := UpperCase(Trim(AGenero));
+  ec := UpperCase(Trim(AEstadoCivil));
+
+  if (g = 'M') or (Pos('MASC', g) = 1) then
+    Result := 'Sr.'
+  else if (g = 'F') or (Pos('FEM', g) = 1) then
+  begin
+    if (ec <> '') and ((Pos('CASAD', ec) > 0) or (Pos('UNI', ec) > 0) or (Pos('ESTAVEL', ec) > 0) or (Pos('ESTÁVEL', ec) > 0)) then
+      Result := 'Sra.'
+    else
+      Result := 'Srta.';
+  end
+  else
+    Result := '';
+end;
+
+// =============================================================================
+// Helper: ObterCodigoTipoTratamento
+// Busca o código na tabela USER_geoapolo_tipotratamento
+// =============================================================================
+function Tfrmentidades.ObterCodigoTipoTratamento(const AAbreviatura: string): string;
+var
+  Qry: TFDQuery;
+  vAbrev: string;
+begin
+  vAbrev := Trim(AAbreviatura);
+  Result := vAbrev;
+  if vAbrev = '' then Exit;
+
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := modulo_dados.fdbanco;
+    Qry.SQL.Text :=
+      'SELECT TOP 1 abreviatura, tipotratcod FROM USER_geoapolo_tipotratamento WITH (NOLOCK) ' +
+      'WHERE UPPER(abreviatura) = UPPER(:abrev) OR UPPER(descricao_tratamento) LIKE UPPER(:abrev2)';
+    Qry.ParamByName('abrev').AsString  := vAbrev;
+    Qry.ParamByName('abrev2').AsString := '%' + vAbrev + '%';
+    Qry.Open;
+    if not Qry.IsEmpty then
+    begin
+      if Trim(Qry.FieldByName('abreviatura').AsString) <> '' then
+        Result := Trim(Qry.FieldByName('abreviatura').AsString)
+      else
+        Result := Trim(Qry.FieldByName('tipotratcod').AsString);
+    end;
+  except
+    Result := vAbrev;
+  end;
+  Qry.Free;
+end;
+
+// =============================================================================
+// Helper: ObterCodigoRegiaoPorUF
+// Mapeia a sigla do estado (UF) para a respectiva região conforme regras:
+//   - RS, SC, PR -> Região Sul (código '1')
+//   - SP, MG, RJ, ES -> Região Sudeste (código '5')
+//   - MS, MT, GO, TO, DF -> Região Centro-Oeste (código '3')
+//   - AM, RO, PA, AC, AP, RR -> Região Norte (código '4')
+//   - AL, BA, CE, MA, PB, PE, PI, RN, SE -> Região Nordeste (código '2')
+// =============================================================================
+function Tfrmentidades.ObterCodigoRegiaoPorUF(const AUF: string): string;
+var
+  U, NomeBusca, FallbackCod: string;
+  Qry: TFDQuery;
+begin
+  Result := '';
+  U := UpperCase(Trim(AUF));
+  if U = '' then Exit;
+
+  // Sul: RS, SC, PR
+  if (U = 'RS') or (U = 'SC') or (U = 'PR') then
+  begin
+    NomeBusca := 'SUL';
+    FallbackCod := '1';
+  end
+  // Sudeste: SP, MG, RJ, ES
+  else if (U = 'SP') or (U = 'MG') or (U = 'RJ') or (U = 'ES') then
+  begin
+    NomeBusca := 'SUDESTE';
+    FallbackCod := '5';
+  end
+  // Centro-Oeste: MS, MT, GO, TO, DF
+  else if (U = 'MS') or (U = 'MT') or (U = 'GO') or (U = 'TO') or (U = 'DF') then
+  begin
+    NomeBusca := 'CENTRO';
+    FallbackCod := '3';
+  end
+  // Norte: AM, RO, PA, AC, AP, RR
+  else if (U = 'AM') or (U = 'RO') or (U = 'PA') or (U = 'AC') or (U = 'AP') or (U = 'RR') then
+  begin
+    NomeBusca := 'NORTE';
+    FallbackCod := '4';
+  end
+  // Nordeste: AL, BA, CE, MA, PB, PE, PI, RN, SE
+  else if (U = 'AL') or (U = 'BA') or (U = 'CE') or (U = 'MA') or (U = 'PB') or
+          (U = 'PE') or (U = 'PI') or (U = 'RN') or (U = 'SE') then
+  begin
+    NomeBusca := 'NORDESTE';
+    FallbackCod := '2';
+  end
+  else
+    Exit;
+
+  Result := FallbackCod;
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := modulo_dados.fdbanco;
+    if NomeBusca = 'NORTE' then
+      Qry.SQL.Text := 'SELECT TOP 1 RegCodEstr FROM REGIAO WITH (NOLOCK) WHERE RegNome LIKE ''%NORTE%'' AND RegNome NOT LIKE ''%NORDESTE%'''
+    else if NomeBusca = 'CENTRO' then
+      Qry.SQL.Text := 'SELECT TOP 1 RegCodEstr FROM REGIAO WITH (NOLOCK) WHERE RegNome LIKE ''%CENTRO%'''
+    else
+      Qry.SQL.Text := 'SELECT TOP 1 RegCodEstr FROM REGIAO WITH (NOLOCK) WHERE RegNome LIKE ''%' + NomeBusca + '%''';
+    Qry.Open;
+    if not Qry.IsEmpty and (Trim(Qry.Fields[0].AsString) <> '') then
+      Result := Trim(Qry.Fields[0].AsString);
+  except
+    // Mantém FallbackCod
+  end;
+  Qry.Free;
+end;
+
+// =============================================================================
+// Helper: GarantirAutenticacaoAlvo
+// =============================================================================
+function Tfrmentidades.GarantirAutenticacaoAlvo(AAPI: TAlvoAPI): Boolean;
+var
+  vusucodapolo, vsenhaalvoplano, vsenhaalvocriptografada, senhaalvo: string;
+  Qry: TFDQuery;
+begin
+  Result := False;
+  if not Assigned(AAPI) then Exit;
+
+  if Trim(frmprincipal.token_alvo) <> '' then
+  begin
+    AAPI.Token := frmprincipal.token_alvo;
+    Exit(True);
+  end;
+
+  if Trim(frmprincipal.usucod_apolo) = '' then
+  begin
+    Qry := TFDQuery.Create(nil);
+    try
+      Qry.Connection := modulo_dados.fdbanco;
+      Qry.SQL.Text := 'SELECT usucod_apolo, senha_alvo FROM USER_geoapolo_usuarios WITH (NOLOCK) WHERE usucod = :codigousuario';
+      Qry.ParamByName('codigousuario').AsString := frmlogon.codigousuario;
+      Qry.Open;
+      if not Qry.IsEmpty and (Trim(Qry.FieldByName('usucod_apolo').AsString) <> '') and (Trim(Qry.FieldByName('senha_alvo').AsString) <> '') then
+      begin
+        frmprincipal.usucod_apolo := Qry.FieldByName('usucod_apolo').AsString;
+        frmprincipal.senha_alvo   := Qry.FieldByName('senha_alvo').AsString;
+      end;
+    finally
+      Qry.Free;
+    end;
+  end;
+
+  if Trim(frmprincipal.usucod_apolo) = '' then
+  begin
+    vusucodapolo := UpperCase(InputBox('Usuário Alvo', 'Informe o usuário de acesso ao Alvo:', ''));
+    if Trim(vusucodapolo) = '' then
+    begin
+      MessageDlg('Operação cancelada. Usuário alvo não foi informado.', mtWarning, [mbOK], 0);
+      Exit(False);
+    end;
+
+    if not SolicitarSenhaMascarada('Senha do Usuário Alvo', 'Informe a senha do usuário alvo (' + vusucodapolo + '):', vsenhaalvoplano) then
+    begin
+      MessageDlg('Operação cancelada. Senha alvo não foi informada.', mtWarning, [mbOK], 0);
+      Exit(False);
+    end;
+
+    vsenhaalvocriptografada := funcoes.criptografia(35, vsenhaalvoplano);
+    Qry := TFDQuery.Create(nil);
+    try
+      Qry.Connection := modulo_dados.fdbanco;
+      Qry.SQL.Text := 'UPDATE USER_geoapolo_usuarios SET usucod_apolo = :usucodapolo, senha_alvo = :senhaalvo WHERE usucod = :codigousuario';
+      Qry.ParamByName('usucodapolo').AsString   := vusucodapolo;
+      Qry.ParamByName('senhaalvo').AsString     := vsenhaalvocriptografada;
+      Qry.ParamByName('codigousuario').AsString := frmlogon.codigousuario;
+      Qry.ExecSQL;
+    finally
+      Qry.Free;
+    end;
+
+    frmprincipal.usucod_apolo := vusucodapolo;
+    frmprincipal.senha_alvo   := vsenhaalvocriptografada;
+  end;
+
+  senhaalvo := funcoes.decriptografia(35, frmprincipal.senha_alvo, frmprincipal.senhaapp);
+  if not AAPI.Login(frmprincipal.usucod_apolo, senhaalvo) then
+  begin
+    MessageDlg('Falha ao autenticar na API do Alvo!', mtError, [mbOK], 0);
+    Exit(False);
+  end;
+
+  frmprincipal.token_alvo := AAPI.Token;
+  Result := True;
+end;
+
+// =============================================================================
+// Helper: GarantirContatoIntegradoAlvo
+// Verifica se a entidade possui contato vinculado em USER_geoapolo_entidade_contato.
+// Se possuir:
+// 1. Busca dados do contato no GeoAlvo.
+// 2. Pelo CPF, verifica se já existe no Alvo (via banco de dados ou entcod local).
+// 3. Se já existir, traz o entcod do Alvo e vincula.
+// 4. Se não encontrar, faz primeiro a integração do contato e vincula o código.
+// =============================================================================
+function Tfrmentidades.GarantirContatoIntegradoAlvo(const AGeoEntCod: string; API: TAlvoAPI; out AEntCodContato: string; out AErro: string): Boolean;
+var
+  Qry: TFDQuery;
+  vGeoContato, vEntCodAlvo, vDocCPF, vDigitosCPF, vMsg, vTrat: string;
+  EntContato: TEntidade;
+begin
+  Result := True;
+  AErro := '';
+  AEntCodContato := '';
+  if Trim(AGeoEntCod) = '' then Exit;
+
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := modulo_dados.fdbanco;
+
+    // 1. Verifica se a entidade tem contato vinculado
+    Qry.SQL.Text :=
+      'SELECT TOP 1 econt.EntCodContato, econt.entCod, uge.entcod AS uge_entcod ' +
+      'FROM USER_geoapolo_entidade_contato econt WITH (NOLOCK) ' +
+      'LEFT JOIN USER_geoapolo_entidade uge WITH (NOLOCK) ON econt.EntCodContato = uge.geoentcod ' +
+      'WHERE econt.geoentcod = :geoentcod';
+    Qry.ParamByName('geoentcod').AsString := AGeoEntCod;
+    Qry.Open;
+
+    if Qry.IsEmpty then
+      Exit(True);
+
+    vGeoContato := Trim(Qry.FieldByName('EntCodContato').AsString);
+    if vGeoContato = '' then
+      Exit(True);
+
+    vEntCodAlvo := Trim(Qry.FieldByName('entCod').AsString);
+    if vEntCodAlvo = '' then
+      vEntCodAlvo := Trim(Qry.FieldByName('uge_entcod').AsString);
+
+    // 2. Se ainda não possui entcod vinculado, busca no Alvo pelo CPF
+    if vEntCodAlvo = '' then
+    begin
+      Qry.Close;
+      Qry.SQL.Text :=
+        'SELECT geonumerodocumento FROM USER_geoapolo_entidade_documentos WITH (NOLOCK) ' +
+        'WHERE geoentcod = :geoentcod AND geotipodocumento LIKE ''%CPF%''';
+      Qry.ParamByName('geoentcod').AsString := vGeoContato;
+      Qry.Open;
+
+      if not Qry.IsEmpty then
+      begin
+        vDocCPF := Trim(Qry.FieldByName('geonumerodocumento').AsString);
+        vDigitosCPF := TRegEx.Replace(vDocCPF, '\D', '');
+
+        if vDigitosCPF <> '' then
+        begin
+          Qry.Close;
+          Qry.SQL.Text :=
+            'SELECT TOP 1 entcod FROM entidades_apolo WITH (NOLOCK) ' +
+            'WHERE entcpfcgc = :cpf ' +
+            '   OR REPLACE(REPLACE(REPLACE(ISNULL(entcpfcgc,''''), ''.'', ''''), ''-'', ''''), ''/'', '''') = :cpf_digitos';
+          Qry.ParamByName('cpf').AsString := vDocCPF;
+          Qry.ParamByName('cpf_digitos').AsString := vDigitosCPF;
+          Qry.Open;
+
+          if not Qry.IsEmpty then
+            vEntCodAlvo := Trim(Qry.FieldByName('entcod').AsString);
+        end;
+      end;
+    end;
+
+    // 3. Se já encontrou no Alvo, vincula localmente
+    if vEntCodAlvo <> '' then
+    begin
+      Qry.Close;
+      Qry.SQL.Text := 'UPDATE USER_geoapolo_entidade SET entcod = :entcod WHERE geoentcod = :geoentcod';
+      Qry.ParamByName('entcod').AsString := vEntCodAlvo;
+      Qry.ParamByName('geoentcod').AsString := vGeoContato;
+      Qry.ExecSQL;
+
+      Qry.Close;
+      Qry.SQL.Text := 'UPDATE USER_geoapolo_entidade_contato SET entCod = :entcod WHERE geoentcod = :geoentcod AND EntCodContato = :geocontato';
+      Qry.ParamByName('entcod').AsString := vEntCodAlvo;
+      Qry.ParamByName('geoentcod').AsString := AGeoEntCod;
+      Qry.ParamByName('geocontato').AsString := vGeoContato;
+      Qry.ExecSQL;
+
+      AEntCodContato := vEntCodAlvo;
+      Exit(True);
+    end;
+
+    // 4. Não encontrou no Alvo: integra primeiro o contato no Alvo
+    if not Self.MontarEntidadeParaEnvio(vGeoContato, EntContato, vTrat) then
+    begin
+      AErro := 'Não foi possível carregar os dados do contato vinculado (' + vGeoContato + ') para integração prévia.';
+      Exit(False);
+    end;
+
+    EntContato.Operacao := 'I';
+    EntContato.Codigo := '';
+
+    if not API.InserirAlterarEntidade(EntContato, vMsg) then
+    begin
+      vEntCodAlvo := ExtrairEntCodResposta(vMsg);
+      if vEntCodAlvo = '' then
+      begin
+        AErro := 'Falha ao integrar o contato vinculado (' + vGeoContato + ') no Alvo: ' + #13#10 + vMsg;
+        Exit(False);
+      end;
+    end
+    else
+    begin
+      vEntCodAlvo := ExtrairEntCodResposta(vMsg);
+    end;
+
+    if vEntCodAlvo <> '' then
+    begin
+      Self.AtualizarEntidadeExportada(vGeoContato, vEntCodAlvo, vTrat);
+
+      Qry.Close;
+      Qry.SQL.Text := 'UPDATE USER_geoapolo_entidade_contato SET entCod = :entcod WHERE geoentcod = :geoentcod AND EntCodContato = :geocontato';
+      Qry.ParamByName('entcod').AsString := vEntCodAlvo;
+      Qry.ParamByName('geoentcod').AsString := AGeoEntCod;
+      Qry.ParamByName('geocontato').AsString := vGeoContato;
+      Qry.ExecSQL;
+
+      AEntCodContato := vEntCodAlvo;
+      Exit(True);
+    end
+    else
+    begin
+      AErro := 'Contato vinculado (' + vGeoContato + ') integrado, mas o código retornado pelo Alvo não foi identificado.';
+      Exit(False);
+    end;
+
+  finally
+    Qry.Free;
+  end;
+end;
+
+// =============================================================================
+// Helper: MontarEntidadeParaEnvio
+// Popula a estrutura TEntidade com todos os dados da entidade selecionada
+// =============================================================================
+function Tfrmentidades.MontarEntidadeParaEnvio(const AGeoEntCod: string; out AEntidade: TEntidade; out ATratCod: string): Boolean;
+var
+  vDocCPFCNPJ, vDocRGIE, vTipoWeb, vTratAbrev, vUF: string;
+  vGenero, vEstCivil: string;
+  i, a, numerocategorias: Integer;
+  bTemGOCoord, bTemLoja: Boolean;
+
+  function GetVal(ADataSet: TDataSet; const Names: array of string): string;
+  var
+    k: Integer;
+    Fld: TField;
+  begin
+    Result := '';
+    for k := Low(Names) to High(Names) do
+    begin
+      Fld := ADataSet.FindField(Names[k]);
+      if (Fld <> nil) and (not Fld.IsNull) then
+      begin
+        Result := Trim(Fld.AsString);
+        Exit;
+      end;
+    end;
+  end;
+
+begin
+  Result := False;
+  AEntidade := Default(TEntidade);
+  ATratCod  := '';
+
+  with modulo_dados do
+  begin
+    vDocCPFCNPJ := '';
+    vDocRGIE    := '';
+    fdquerysql18.Close;
+    fdquerysql18.SQL.Clear;
+    fdquerysql18.SQL.Text :=
+      'SELECT geotipodocumento, geonumerodocumento ' +
+      'FROM USER_geoapolo_entidade_documentos WITH (NOLOCK) ' +
+      'WHERE geoentcod = :geoentcod';
+    fdquerysql18.ParamByName('geoentcod').AsString := AGeoEntCod;
+    if executaracao(fdquerysql18, fdbanco, true, dtsfdquerysql18) then
+    begin
+      fdquerysql18.First;
+      while not fdquerysql18.EOF do
+      begin
+        if Pos('CPF', UpperCase(fdquerysql18.FieldByName('geotipodocumento').AsString)) > 0 then
+          vDocCPFCNPJ := Trim(fdquerysql18.FieldByName('geonumerodocumento').AsString)
+        else if Pos('RG', UpperCase(fdquerysql18.FieldByName('geotipodocumento').AsString)) > 0 then
+          vDocRGIE := Trim(fdquerysql18.FieldByName('geonumerodocumento').AsString);
+        fdquerysql18.Next;
+      end;
+    end;
+
+    // Regra de Tipo de Tratamento:
+    // M -> Sr.
+    // F -> Casada / União Estável -> Sra., senão -> Srta.
+    vGenero   := GetVal(fdqueryentidade, ['geoentgenero', 'entgenero']);
+    vEstCivil := GetVal(fdqueryentidade, ['geoentestcivil', 'entestcivil', 'EntEstCivil']);
+
+    vTratAbrev := Self.DeterminarTipoTratamento(vGenero, vEstCivil);
+    if vTratAbrev <> '' then
+      ATratCod := Self.ObterCodigoTipoTratamento(vTratAbrev)
+    else
+      ATratCod := GetVal(fdqueryentidade, ['tipotratcod', 'geotipotratcod']);
+
+    AEntidade.Operacao               := 'I';
+    AEntidade.Codigo                 := '';
+    AEntidade.CodigoAlternativo      := AGeoEntCod;
+    AEntidade.CodigoTipoTratamento   := ATratCod;
+    AEntidade.Nome                   := GetVal(fdqueryentidade, ['geoentnome', 'entnome']);
+    AEntidade.NomeFantasia           := GetVal(fdqueryentidade, ['geoentnomefantasia', 'entnomefant']);
+    AEntidade.CodigoAtivEconomica    := 'null';
+    AEntidade.CodigoOrigem           := GetVal(fdqueryentidade, ['geo_origcodestr', 'origcodestr']);
+    AEntidade.EntidadeDesde          := GetVal(fdqueryentidade, ['geoentdesdedata', 'entdesdedata', 'EntDesdeData']);
+    AEntidade.DataCadastro           := GetVal(fdqueryentidade, ['geoentdatacad', 'entdatacad', 'EntDataCad']);
+    AEntidade.CodigoTipoLograd       := GetVal(fdqueryentidade, ['tipologradabrev', 'entlograd', 'tipolograd']);
+    AEntidade.Endereco               := GetVal(fdqueryentidade, ['geoentender', 'entender']);
+    AEntidade.NumeroEndereco         := GetVal(fdqueryentidade, ['geoenderno', 'entenderno']);
+    AEntidade.NumeroEnderecoParImpar := funcoes.parouimpar(AEntidade.NumeroEndereco);
+    AEntidade.ComplementoEndereco    := GetVal(fdqueryentidade, ['geoentendercomp', 'entendercomp']);
+    AEntidade.Bairro                 := GetVal(fdqueryentidade, ['geoentbair', 'entbair']);
+    AEntidade.CodigoCidade           := GetVal(fdqueryentidade, ['geocidcod', 'cidcod']);
+    AEntidade.Cep                    := GetVal(fdqueryentidade, ['geoentcep', 'entcep']);
+    AEntidade.Tipo                   := GetVal(fdqueryentidade, ['geotipofj', 'enttipofj']);
+    AEntidade.CPFCNPJ                := vDocCPFCNPJ;
+    AEntidade.RGIE                   := vDocRGIE;
+    AEntidade.OrgaoExpedidor         := '';
+    AEntidade.Agropecuarista         := 'Não';
+    AEntidade.InscricaoAgropecuarista:= 'null';
+    AEntidade.CaixaPostal            := GetVal(fdqueryentidade, ['geoentcxapost', 'entcxapost']);
+    AEntidade.CodigoRegiao           := GetVal(fdqueryentidade, ['georegcodestr', 'regcodestr']);
+
+    // Mapeamento da região conforme a UF do estado
+    vUF := GetVal(fdqueryentidade, ['ufsigla']);
+    if (vUF = '') and (AEntidade.CodigoCidade <> '') then
+    begin
+      fdquerysql18.Close; fdquerysql18.SQL.Clear;
+      fdquerysql18.SQL.Text := 'SELECT TOP 1 ufsigla FROM user_geoapolo_cidades WITH (NOLOCK) WHERE geocidcod = :cid';
+      fdquerysql18.ParamByName('cid').AsString := AEntidade.CodigoCidade;
+      try
+        if executaracao(fdquerysql18, fdbanco, true, dtsfdquerysql18) and (not fdquerysql18.IsEmpty) then
+          vUF := Trim(fdquerysql18.FieldByName('ufsigla').AsString);
+      finally
+        fdquerysql18.Close;
+      end;
+    end;
+    if vUF <> '' then
+      AEntidade.CodigoRegiao := Self.ObterCodigoRegiaoPorUF(vUF);
+
+    AEntidade.Conceito               := GetVal(fdqueryentidade, ['geoentconceito', 'entconceito']);
+    AEntidade.CodigoCondPag          := 'null';
+    AEntidade.AlteraCondicaoPagamento:= 'Sim';
+    AEntidade.CodigoTipoCobranca     := GetVal(fdqueryentidade, ['geotipocobcod', 'tipocobcod', 'TipoCobCod']);
+    if Trim(AEntidade.CodigoTipoCobranca) = '' then
+      AEntidade.CodigoTipoCobranca   := '0000027';
+
+    if (fdqueryentidade.FindField('entdataanivfund') <> nil) and (not fdqueryentidade.FieldByName('entdataanivfund').IsNull) then
+      AEntidade.DataFundacao := DateTimeToISO8601(fdqueryentidade.FieldByName('entdataanivfund').AsDateTime)
+    else if (fdqueryentidade.FindField('geoentdataanivfund') <> nil) and (not fdqueryentidade.FieldByName('geoentdataanivfund').IsNull) then
+      AEntidade.DataFundacao := DateTimeToISO8601(fdqueryentidade.FieldByName('geoentdataanivfund').AsDateTime)
+    else
+      AEntidade.DataFundacao := '';
+
+    AEntidade.CodigoCargo            := GetVal(fdqueryentidade, ['geocargocodestr', 'cargocodestr']);
+    AEntidade.Genero                 := vGenero;
+    AEntidade.CodigoStatus           := 'Ativo';
+    AEntidade.CaracteristicaImovel   := 0;
+    AEntidade.Natureza               := 'Consumidor';
+    AEntidade.ComunicacaoEtiqueta    := 'Sim';
+    AEntidade.ComunicacaoEmail       := 'Sim';
+    AEntidade.ComunicacaoMalaDireta  := 'Não';
+    AEntidade.ComunicacaoTelemarketing := 'Não';
+    AEntidade.NumeroBanco            := '';
+    AEntidade.NumeroAgBancaria       := '';
+    AEntidade.NumeroContaCorrente    := '';
+    if fdqueryentidade.FindField('USERValor_Contribuicao') <> nil then
+      AEntidade.ValorContribuicao    := fdqueryentidade.FieldByName('USERValor_Contribuicao').AsFloat
+    else
+      AEntidade.ValorContribuicao    := 0.0;
+
+    // Categorias
+    if fdqueryentidade.FindField('categcodestr') <> nil then
+    begin
+      numerocategorias := funcoes.ContarVirgulas(fdqueryentidade.FieldByName('categcodestr').AsString);
+      SetLength(AEntidade.Categorias, numerocategorias + 1);
+      for a := 0 to numerocategorias do
+      begin
+        AEntidade.Categorias[a].Operacao         := 'I';
+        AEntidade.Categorias[a].Codigo           := ExtrairConjunto(fdqueryentidade.FieldByName('categcodestr').AsString, a);
+        AEntidade.Categorias[a].AtivaTabelaPreco := 'Sim';
+      end;
+    end
+    else
+      SetLength(AEntidade.Categorias, 0);
+
+    // Se possui categoria de Grupo de Oração ou Coordenador (02.001...), adiciona também 08.009 (Loja)
+    bTemGOCoord := False;
+    bTemLoja    := False;
+    for a := 0 to High(AEntidade.Categorias) do
+    begin
+      if Pos('02.001', AEntidade.Categorias[a].Codigo) = 1 then
+        bTemGOCoord := True;
+      if Trim(AEntidade.Categorias[a].Codigo) = '08.009' then
+        bTemLoja := True;
+    end;
+    if bTemGOCoord and (not bTemLoja) then
+    begin
+      SetLength(AEntidade.Categorias, Length(AEntidade.Categorias) + 1);
+      AEntidade.Categorias[High(AEntidade.Categorias)].Operacao         := 'I';
+      AEntidade.Categorias[High(AEntidade.Categorias)].Codigo           := '08.009';
+      AEntidade.Categorias[High(AEntidade.Categorias)].AtivaTabelaPreco := 'Sim';
+    end;
+
+    // Telefones
+    fdquerysql1.Close; fdquerysql1.SQL.Clear;
+    fdquerysql1.SQL.Text := 'SELECT * FROM USER_geoapolo_entidade_comunicacao WITH (NOLOCK) WHERE geoentcod = :geoentcod';
+    fdquerysql1.ParamByName('geoentcod').AsString := AGeoEntCod;
+    if executaracao(fdquerysql1, fdbanco, true, dtsfdquerysql1) then
+    begin
+      i := 0; fdquerysql1.First;
+      while not fdquerysql1.EOF do
+      begin
+        SetLength(AEntidade.Telefones, i + 1);
+        AEntidade.Telefones[i].Operacao    := 'I';
+        AEntidade.Telefones[i].Sequencia   := i + 1;
+        AEntidade.Telefones[i].Tipo        := fdquerysql1.FieldByName('geotipotelefone').AsString;
+        AEntidade.Telefones[i].DDI         := '55';
+        AEntidade.Telefones[i].DDD         := fdquerysql1.FieldByName('geotelefoneddd').AsString;
+        AEntidade.Telefones[i].Numero      := fdquerysql1.FieldByName('geotelefonenumero').AsString;
+        AEntidade.Telefones[i].NumeroRamal := '';
+        AEntidade.Telefones[i].Principal   := IfThen(i = 0, 'Sim', 'Não');
+        AEntidade.Telefones[i].Descricao   := '';
+        AEntidade.Telefones[i].NFe         := 'Não';
+        AEntidade.Telefones[i].NFSe        := 'Não';
+        Inc(i); fdquerysql1.Next;
+      end;
+    end
+    else
+      SetLength(AEntidade.Telefones, 0);
+
+    // Endereço
+    SetLength(AEntidade.Enderecos, 1);
+    AEntidade.Enderecos[0].Operacao                  := 'I';
+    AEntidade.Enderecos[0].Sequencia                 := 1;
+    AEntidade.Enderecos[0].CodigoEntidade            := AEntidade.CodigoAlternativo;
+    AEntidade.Enderecos[0].CodigoEntidadeRelacionada := '';
+    AEntidade.Enderecos[0].EnderecoEntrega           := 'Sim';
+    AEntidade.Enderecos[0].EnderecoCobranca          := 'Não';
+    AEntidade.Enderecos[0].EnderecoFaturamento       := 'Não';
+    AEntidade.Enderecos[0].EnderecoColeta            := 'Não';
+    AEntidade.Enderecos[0].Nome                      := AEntidade.Nome;
+    AEntidade.Enderecos[0].Logradouro                := AEntidade.CodigoTipoLograd;
+    AEntidade.Enderecos[0].Endereco                  := AEntidade.Endereco;
+    AEntidade.Enderecos[0].NumeroEndereco            := AEntidade.NumeroEndereco;
+    AEntidade.Enderecos[0].NumeroEnderecoParImpar    := '';
+    AEntidade.Enderecos[0].ComplementoEndereco       := AEntidade.ComplementoEndereco;
+    AEntidade.Enderecos[0].Bairro                    := AEntidade.Bairro;
+    AEntidade.Enderecos[0].CodigoCidade              := AEntidade.CodigoCidade;
+    AEntidade.Enderecos[0].Cep                       := AEntidade.Cep;
+    AEntidade.Enderecos[0].TipoFisicaJuridica        := AEntidade.Tipo;
+    AEntidade.Enderecos[0].CPFCNPJ                   := AEntidade.CPFCNPJ;
+    AEntidade.Enderecos[0].RGIE                      := AEntidade.RGIE;
+    AEntidade.Enderecos[0].OrgaoExpedidor            := AEntidade.OrgaoExpedidor;
+    AEntidade.Enderecos[0].CaixaPostal               := '';
+    AEntidade.Enderecos[0].Email                     := '';
+    AEntidade.Enderecos[0].PaginaWeb                 := '';
+    AEntidade.Enderecos[0].NomeContato               := '';
+    AEntidade.Enderecos[0].TextoLivre                := '';
+    AEntidade.Enderecos[0].DataValidadeInicial       := Now;
+    AEntidade.Enderecos[0].DataValidadeFinal         := IncYear(Now, 100);
+    AEntidade.Enderecos[0].EnderecoCertificado       := 'Não';
+
+    // Contatos
+    SetLength(AEntidade.Contatos, 0);
+    fdquerysql3.Close; fdquerysql3.SQL.Clear;
+    fdquerysql3.SQL.Text :=
+      'SELECT econt.EntCodContato, econt.entCod, uge.entcod AS uge_entcod, uge.geoentnome, uge.tipolograd, uge.geoentender, ' +
+      ' uge.geoenderno, uge.geoentendercomp, uge.geoentbair, uge.geocidcod, uge.geoentcep, ' +
+      ' uge.geotipofj, econt.EntContatoCelular, econt.EntContatoTelefone' +
+      ' FROM USER_geoapolo_entidade_contato econt WITH(NOLOCK)' +
+      ' INNER JOIN USER_geoapolo_entidade uge WITH(NOLOCK) ON econt.EntCodContato = uge.geoentcod' +
+      ' WHERE econt.geoentcod = :geoentcod';
+    fdquerysql3.ParamByName('geoentcod').AsString := AGeoEntCod;
+    if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
+    begin
+      fdquerysql3.First;
+      if not fdquerysql3.EOF then
+      begin
+        SetLength(AEntidade.Contatos, 1);
+        AEntidade.Contatos[0].Operacao       := 'I';
+        AEntidade.Contatos[0].Codigo         := Trim(fdquerysql3.FieldByName('entCod').AsString);
+        if AEntidade.Contatos[0].Codigo = '' then
+          AEntidade.Contatos[0].Codigo       := Trim(fdquerysql3.FieldByName('uge_entcod').AsString);
+        if AEntidade.Contatos[0].Codigo = '' then
+          AEntidade.Contatos[0].Codigo       := Trim(fdquerysql3.FieldByName('EntCodContato').AsString);
+        AEntidade.Contatos[0].Nome           := fdquerysql3.FieldByName('geoentnome').AsString;
+        AEntidade.Contatos[0].Endereco       := fdquerysql3.FieldByName('geoentender').AsString;
+        AEntidade.Contatos[0].NumeroEndereco := fdquerysql3.FieldByName('geoenderno').AsString;
+        AEntidade.Contatos[0].Bairro         := fdquerysql3.FieldByName('geoentbair').AsString;
+        AEntidade.Contatos[0].CodigoCidade   := fdquerysql3.FieldByName('geocidcod').AsString;
+        AEntidade.Contatos[0].Cep            := fdquerysql3.FieldByName('geoentcep').AsString;
+        AEntidade.Contatos[0].TipoFisicaJuridica := fdquerysql3.FieldByName('geotipofj').AsString;
+        AEntidade.Contatos[0].Principal      := 'Sim';
+        AEntidade.Contatos[0].CodigoStatus   := 'Ativo';
+        SetLength(AEntidade.Contatos[0].Telefones, 1);
+        AEntidade.Contatos[0].Telefones[0].Operacao  := 'I';
+        AEntidade.Contatos[0].Telefones[0].Sequencia := 1;
+        AEntidade.Contatos[0].Telefones[0].Numero    := fdquerysql3.FieldByName('EntContatoCelular').AsString;
+        AEntidade.Contatos[0].Telefones[0].Principal := 'Sim';
+      end;
+    end;
+
+    // Emails e Web
+    SetLength(AEntidade.Emails, 0);
+    fdquerysql3.Close; fdquerysql3.SQL.Clear;
+    fdquerysql3.SQL.Text := 'SELECT * FROM USER_geoapolo_entidade_webcontato WITH (NOLOCK) WHERE geoentcod = :geoentcod';
+    fdquerysql3.ParamByName('geoentcod').AsString := AGeoEntCod;
+    if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
+    begin
+      i := 0; fdquerysql3.First;
+      while not fdquerysql3.EOF do
+      begin
+        SetLength(AEntidade.Emails, i + 1);
+        AEntidade.Emails[i].Operacao  := 'I';
+        AEntidade.Emails[i].Sequencia := i + 1;
+        vTipoWeb := '';
+        if fdquerysql3.FindField('tipo_contato') <> nil then
+          vTipoWeb := Trim(fdquerysql3.FieldByName('tipo_contato').AsString)
+        else if fdquerysql3.FindField('entwebtipo') <> nil then
+          vTipoWeb := Trim(fdquerysql3.FieldByName('entwebtipo').AsString);
+
+        if (UpperCase(vTipoWeb) = 'COMERCIAL') or (UpperCase(vTipoWeb) = 'COM') or (Pos('COM', UpperCase(vTipoWeb)) = 1) then
+          vTipoWeb := 'Comercial'
+        else if (UpperCase(vTipoWeb) = 'FINANCEIRO') or (UpperCase(vTipoWeb) = 'FIN') or (Pos('FIN', UpperCase(vTipoWeb)) = 1) then
+          vTipoWeb := 'Financeiro'
+        else
+          vTipoWeb := 'Pessoal';
+
+        AEntidade.Emails[i].Tipo      := vTipoWeb;
+        AEntidade.Emails[i].Email     := fdquerysql3.FieldByName('email').AsString;
+        AEntidade.Emails[i].Principal := 'Sim';
+        AEntidade.Emails[i].NFe       := 'Não';
+        AEntidade.Emails[i].NFSe      := 'Não';
+        AEntidade.Emails[i].Descricao := '';
+        if fdquerysql3.FindField('website') <> nil then
+          AEntidade.Emails[i].Url     := fdquerysql3.FieldByName('website').AsString
+        else
+          AEntidade.Emails[i].Url     := '';
+        Inc(i); fdquerysql3.Next;
+      end;
+    end;
+  end;
+
+  Result := True;
+end;
+
+// =============================================================================
+// Helper: AtualizarEntidadeExportada
+// =============================================================================
+procedure Tfrmentidades.AtualizarEntidadeExportada(const AGeoEntCod, ANovoEntCod, ATratCod: string);
+var
+  Qry: TFDQuery;
+  vUsuCodApolo: string;
+begin
+  vUsuCodApolo := frmprincipal.usucod_apolo;
+  if Trim(vUsuCodApolo) = '' then
+    vUsuCodApolo := frmlogon.codigousuario;
+
+  Qry := TFDQuery.Create(nil);
+  try
+    Qry.Connection := modulo_dados.fdbanco;
+    Qry.SQL.Text :=
+      'UPDATE USER_geoapolo_entidade SET ' +
+      '  entcod = CASE WHEN :entcod <> '''' THEN :entcod2 ELSE entcod END, ' +
+      '  atualizou_apolo = ''S'', ' +
+      '  usucod_atualizou_apolo = :usucod, ' +
+      '  data_atualizou_apolo = GETDATE(), ' +
+      '  geotipotratcod = CASE WHEN :tratcod <> '''' THEN :tratcod2 ELSE geotipotratcod END ' +
+      'WHERE geoentcod = :geoentcod';
+    Qry.ParamByName('entcod').AsString    := Trim(ANovoEntCod);
+    Qry.ParamByName('entcod2').AsString   := Trim(ANovoEntCod);
+    Qry.ParamByName('usucod').AsString    := vUsuCodApolo;
+    Qry.ParamByName('tratcod').AsString   := Trim(ATratCod);
+    Qry.ParamByName('tratcod2').AsString  := Trim(ATratCod);
+    Qry.ParamByName('geoentcod').AsString := AGeoEntCod;
+    Qry.ExecSQL;
+
+    // Atualiza dataset em memória se o registro corrente for ele
+    if modulo_dados.fdqueryentidade.Active and
+       (modulo_dados.fdqueryentidade.FieldByName('geoentcod').AsString = AGeoEntCod) then
+    begin
+      try
+        modulo_dados.fdqueryentidade.Edit;
+        if Trim(ANovoEntCod) <> '' then
+          modulo_dados.fdqueryentidade.FieldByName('entcod').AsString := ANovoEntCod;
+        if modulo_dados.fdqueryentidade.FindField('atualizou_apolo') <> nil then
+          modulo_dados.fdqueryentidade.FieldByName('atualizou_apolo').AsString := 'S';
+        if (Trim(ATratCod) <> '') and (modulo_dados.fdqueryentidade.FindField('tipotratcod') <> nil) then
+          modulo_dados.fdqueryentidade.FieldByName('tipotratcod').AsString := ATratCod;
+        modulo_dados.fdqueryentidade.Post;
+      except
+      end;
+    end;
+  finally
+    Qry.Free;
+  end;
+end;
+
+// =============================================================================
+// spbexportaentidadesClick — Exportação de entidade individual para o Alvo
 // =============================================================================
 procedure Tfrmentidades.spbexportaentidadesClick(Sender: TObject);
 var
-  Campo, Valor, cepvalor, numerolimpo, vusucodapolo, vretorno,
-  vorigcodestr, jsonformatado, vMensagem, vsenhaalvoplano,
-  vsenhaalvocriptografada: string;
-  i, a, ncampos: integer;
-  Entidade   : TEntidade;
-  API        : TAlvoAPI;
-  Tel        : TTelefone;
-  Email      : TEmail;
-  Cat        : TCategoria;
-  vDocCPFCNPJ: string;
-  vDocRGIE   : string;
-  senhaalvo  : string;
+  Entidade: TEntidade;
+  API: TAlvoAPI;
+  vMensagem, vNovoEntCod, vTratCod: string;
+  vEntCodContato, vErroContato: string;
 begin
-  with frmentidades, modulo_dados do
-  begin
-    memobaseapolo.Clear;
-    memoplataformasve.Clear;
-
-    if (cbobuscabanco.Text = 'GeoApolo') and (fdqueryentidade.FieldByName('entobservacoes').AsString = '') then
+  Screen.Cursor := crSQLWait;
+  try
+    with frmentidades, modulo_dados do
     begin
-      if (fdqueryentidade.FieldByName('entcod').AsString = null) or (fdqueryentidade.FieldByName('entcod').AsString = '') then
-      begin
-        ventcod := '';
-        sql := 'SELECT geonumerodocumento FROM USER_geoapolo_entidade_documentos' +
-               ' WHERE geoentcod = :geoentcod' +
-               ' AND geotipodocumento like ' + QuotedStr('%CPF/CNPJ%');
-        fdquerysql18.Close; fdquerysql18.SQL.Clear;
-        fdquerysql18.SQL.Text := sql;
-        fdquerysql18.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
-        if executaracao(fdquerysql18, fdbanco, true, dtsfdquerysql18) then
-        begin
-          fdquerysql1.Close; fdquerysql1.SQL.Clear;
-          fdquerysql1.SQL.Text := 'SELECT entcod FROM entidades_geoapolo WHERE entcpfcgc = :geonumerodocumento';
-          fdquerysql1.ParamByName('geonumerodocumento').AsString := fdquerysql18.FieldByName('geonumerodocumento').AsString;
-          if executaracao(fdquerysql1, fdbanco, true, dtsfdquerysql1) then
-          begin
-            ventcod := fdquerysql1.FieldByName('entcod').AsString;
-            fdquerysql3.Close; fdquerysql3.SQL.Clear;
-            fdquerysql3.SQL.Text := 'UPDATE USER_geoapolo_entidade SET entcod = :entcod WHERE geoentcod = :geoentcod';
-            fdquerysql3.ParamByName('entcod').AsString    := ventcod;
-            fdquerysql3.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
-            executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
-          end;
-        end;
-      end;
+      memobaseapolo.Clear;
+      memoplataformasve.Clear;
 
-      if fdqueryentidade.FieldByName('entcod').AsString = '' then
-        ventcod := ''
-      else if fdqueryentidade.Active and (fdqueryentidade.RecordCount > 0) then
+      if cbobuscabanco.Text = 'GeoApolo' then
+      begin
+        if Pos('[PEND', UpperCase(fdqueryentidade.FieldByName('entobservacoes').AsString)) > 0 then
         begin
-          if fdqueryentidade.FindField('entcod') <> nil then
-            ventcod := Trim(fdqueryentidade.FieldByName('entcod').AsString)
-          else
-            ventcod := '';
+          MessageDlg('A exportação para o Alvo foi interrompida pois esta entidade possui [PENDÊNCIAS] registradas!', mtWarning, [mbOK], 0);
+          Exit;
         end;
 
-      if Trim(ventcod) <> '' then
+        if (fdqueryentidade.FieldByName('entcod').AsString = null) or (Trim(fdqueryentidade.FieldByName('entcod').AsString) = '') then
         begin
-          panel2.Visible := True; panel2.Top := 85; panel2.Left := 24; panel2.Refresh;
-          if frmprincipal.usucod_apolo = '' then
-            begin
-              vusucodapolo := UpperCase(InputBox('Seu Usuário Alvo', 'Login Alvo', ''));
-              frmprincipal.usucod_apolo := vusucodapolo;
-              fdquerysql3.Close; fdquerysql3.SQL.Clear;
-              fdquerysql3.SQL.Text :='UPDATE USER_geoapolo_usuarios SET usucod_apolo = :usucodapolo WHERE usucod = :codigousuario';
-              fdquerysql3.ParamByName('usucodapolo').AsString   := vusucodapolo;
-              fdquerysql3.ParamByName('codigousuario').AsString := frmlogon.codigousuario;
-              executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
-            end;
-          match_code_com_alvo(modulo_dados.fdqueryentidade.FieldByName('geoentcod').AsString, 'GeoApolo');
-          if ventcod <> '' then
-            match_code_com_alvo(ventcod, 'Alvo');
-        end
-      else if ventcod = '' then
-      begin
-        resp := messagedlg('Confirma a exportação desta entidade para o Alvo ? (Y/N)', mtconfirmation, [mbyes, mbno], 0);
-        if resp = idyes then
-        begin
-          vDocCPFCNPJ := ''; vDocRGIE := '';
+          ventcod := '';
+          sql := 'SELECT geonumerodocumento FROM USER_geoapolo_entidade_documentos' +
+                 ' WHERE geoentcod = :geoentcod' +
+                 ' AND geotipodocumento like ' + QuotedStr('%CPF/CNPJ%');
           fdquerysql18.Close; fdquerysql18.SQL.Clear;
-          fdquerysql18.SQL.Text :=
-            'SELECT geotipodocumento, geonumerodocumento' +
-            ' FROM USER_geoapolo_entidade_documentos WHERE geoentcod = :geoentcod';
+          fdquerysql18.SQL.Text := sql;
           fdquerysql18.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
           if executaracao(fdquerysql18, fdbanco, true, dtsfdquerysql18) then
           begin
-            fdquerysql18.First;
-            while not fdquerysql18.EOF do
+            fdquerysql1.Close; fdquerysql1.SQL.Clear;
+            fdquerysql1.SQL.Text := 'SELECT entcod FROM entidades_geoapolo WHERE entcpfcgc = :geonumerodocumento';
+            fdquerysql1.ParamByName('geonumerodocumento').AsString := fdquerysql18.FieldByName('geonumerodocumento').AsString;
+            if executaracao(fdquerysql1, fdbanco, true, dtsfdquerysql1) then
             begin
-              if Pos('CPF', UpperCase(fdquerysql18.FieldByName('geotipodocumento').AsString)) > 0 then
-                vDocCPFCNPJ := fdquerysql18.FieldByName('geonumerodocumento').AsString
-              else if Pos('RG', UpperCase(fdquerysql18.FieldByName('geotipodocumento').AsString)) > 0 then
-                vDocRGIE := fdquerysql18.FieldByName('geonumerodocumento').AsString;
-              fdquerysql18.Next;
-            end;
-          end;
-          vgeoentcod := fdqueryentidade.FieldByName('geoentcod').AsString;
-          Entidade.Operacao          := 'I';
-          Entidade.Codigo            :='';
-          Entidade.CodigoAlternativo := fdqueryentidade.FieldByName('geoentcod').AsString;
-          Entidade.CodigoTipoTratamento := fdqueryentidade.FieldByName('tipotratcod').AsString;
-          Entidade.Nome              := fdqueryentidade.FieldByName('geoentnome').AsString;
-          Entidade.NomeFantasia      := fdqueryentidade.FieldByName('geoentnomefantasia').AsString;
-          Entidade.CodigoAtivEconomica:='null';
-          Entidade.CodigoOrigem      := fdqueryentidade.FieldByName('origcodestr').AsString;
-          Entidade.EntidadeDesde     := fdqueryentidade.FieldByName('entdesdedata').AsString;
-          Entidade.DataCadastro      := fdqueryentidade.Fieldbyname('entdatacad').AsString;
-          Entidade.CodigoTipoLograd  := fdqueryentidade.FieldByName('entlograd').AsString;
-          Entidade.Endereco          := fdqueryentidade.FieldByName('geoentender').AsString;
-          Entidade.NumeroEndereco    := fdqueryentidade.FieldByName('entenderno').AsString;
-          Entidade.NumeroEnderecoParImpar:= parouimpar(fdqueryentidade.FieldByName('entenderno').asstring);
-          Entidade.ComplementoEndereco := fdqueryentidade.FieldByName('entendercomp').AsString;
-          Entidade.Bairro            := fdqueryentidade.FieldByName('entbair').AsString;
-          Entidade.CodigoCidade      := fdqueryentidade.FieldByName('cidcod').AsString;
-          Entidade.Cep               := fdqueryentidade.FieldByName('entcep').AsString;
-          Entidade.Tipo              := fdqueryentidade.FieldByName('enttipofj').AsString;
-          Entidade.CPFCNPJ           := vDocCPFCNPJ;
-          Entidade.RGIE              := vDocRGIE;
-          Entidade.OrgaoExpedidor    := '';
-          Entidade.Agropecuarista    := 'Não';
-          Entidade.InscricaoAgropecuarista:= 'null';
-          Entidade.CaixaPostal       := fdqueryentidade.FieldByName('entcxapost').AsString;
-          Entidade.CodigoRegiao      := fdqueryentidade.FieldByName('georegcodestr').AsString;
-          Entidade.Conceito          := fdqueryentidade.FieldByName('entconceito').AsString;
-          Entidade.CodigoCondPag     := 'null';
-          Entidade.AlteraCondicaoPagamento:='Sim';
-          Entidade.CodigoTipoCobranca := fdqueryentidade.FieldByName('tipocobcod').asstring;
-          Entidade.DataFundacao       := DateToISO8601(fdqueryentidade.fieldbyname('entdataanivfund').AsDateTime);
-          Entidade.CodigoCargo        := fdqueryentidade.FieldByName('cargocodestr').AsString;
-          Entidade.Genero            := fdqueryentidade.FieldByName('entgenero').AsString;
-          Entidade.CodigoStatus      := 'Ativo';
-          Entidade.CaracteristicaImovel := 0;
-//          Entidade.InscricaoSuframa       := '';
-  //        Entidade.CodigoExcPISCOFINS     := '';
-    //      Entidade.MotivoDesoneracaoICMS  := '';
-          Entidade.Natureza          := 'Consumidor';
-          Entidade.ComunicacaoEtiqueta      := 'Sim';
-          Entidade.ComunicacaoEmail         := 'Sim';
-          Entidade.ComunicacaoMalaDireta    := 'Não';
-          Entidade.ComunicacaoTelemarketing := 'Não';
-          Entidade.NumeroBanco         := '';
-          Entidade.NumeroAgBancaria    := '';
-          Entidade.NumeroContaCorrente := '';
-          Entidade.ValorContribuicao   := fdqueryentidade.FieldByName('USERValor_Contribuicao').AsFloat;
-          numerocategorias := ContarVirgulas(fdqueryentidade.FieldByName('categcodestr').AsString);
-          SetLength(Entidade.Categorias, numerocategorias + 1);
-          for a := 0 to numerocategorias do
-          begin
-            Entidade.Categorias[a].Operacao         := 'I';
-            Entidade.Categorias[a].Codigo           :=
-            ExtrairConjunto(fdqueryentidade.FieldByName('categcodestr').AsString, a);
-            Entidade.Categorias[a].AtivaTabelaPreco := 'Sim';
-          end;
-          //SetLength(Entidade.Telefones, 0);
-          fdquerysql1.Close;
-          fdquerysql1.SQL.Clear;
-          fdquerysql1.SQL.Text :='SELECT * FROM USER_geoapolo_entidade_comunicacao WHERE geoentcod = :geoentcod';
-          fdquerysql1.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
-          if executaracao(fdquerysql1, fdbanco, true, dtsfdquerysql1) then
-          begin
-            i := 0; fdquerysql1.First;
-            while not fdquerysql1.EOF do
-            begin
-              SetLength(Entidade.Telefones, i + 1);
-              Entidade.Telefones[i].Operacao    := 'I';
-              Entidade.Telefones[i].Sequencia   := i + 1;
-              Entidade.Telefones[i].Tipo        := fdquerysql1.FieldByName('geotipotelefone').AsString;
-              Entidade.Telefones[i].DDI         := '55';
-              Entidade.Telefones[i].DDD         := fdquerysql1.FieldByName('geotelefoneddd').AsString;
-              Entidade.Telefones[i].Numero      := fdquerysql1.FieldByName('geotelefonenumero').AsString;
-              Entidade.Telefones[i].NumeroRamal := '';
-              Entidade.Telefones[i].Principal   := IfThen(i = 0, 'Sim', 'Não');
-              Entidade.Telefones[i].Descricao   := '';
-              Entidade.Telefones[i].NFe         := 'Não';
-              Entidade.Telefones[i].NFSe        := 'Não';
-              Inc(i); fdquerysql1.Next;
-            end;
-          end;
-          SetLength(Entidade.Enderecos, 1);
-          Entidade.Enderecos[0].Operacao                  := 'I';
-          Entidade.Enderecos[0].Sequencia                 := 1;
-          Entidade.Enderecos[0].CodigoEntidade            := Entidade.CodigoAlternativo; // vincula ao mesmo geoentcod
-          Entidade.Enderecos[0].CodigoEntidadeRelacionada := '';
-          Entidade.Enderecos[0].EnderecoEntrega           := 'Sim';
-          Entidade.Enderecos[0].EnderecoCobranca          := 'Não';
-          Entidade.Enderecos[0].EnderecoFaturamento       := 'Não';
-          Entidade.Enderecos[0].EnderecoColeta            := 'Não';
-          Entidade.Enderecos[0].Nome                      := Entidade.Nome;
-          Entidade.Enderecos[0].Logradouro                := Entidade.CodigoTipoLograd;
-          Entidade.Enderecos[0].Endereco                  := Entidade.Endereco;
-          Entidade.Enderecos[0].NumeroEndereco            := Entidade.NumeroEndereco;
-          Entidade.Enderecos[0].NumeroEnderecoParImpar    := '';
-          Entidade.Enderecos[0].ComplementoEndereco       := Entidade.ComplementoEndereco;
-          Entidade.Enderecos[0].Bairro                    := Entidade.Bairro;
-          Entidade.Enderecos[0].CodigoCidade              := Entidade.CodigoCidade;
-          Entidade.Enderecos[0].Cep                       := Entidade.Cep;
-          Entidade.Enderecos[0].TipoFisicaJuridica        := Entidade.Tipo;
-          Entidade.Enderecos[0].CPFCNPJ                   := Entidade.CPFCNPJ;
-          Entidade.Enderecos[0].RGIE                      := Entidade.RGIE;
-          Entidade.Enderecos[0].OrgaoExpedidor            := Entidade.OrgaoExpedidor;
-          Entidade.Enderecos[0].CaixaPostal               := '';
-          Entidade.Enderecos[0].Email                     := '';
-          Entidade.Enderecos[0].PaginaWeb                 := '';
-          Entidade.Enderecos[0].NomeContato               := '';
-          Entidade.Enderecos[0].TextoLivre                := '';
-          Entidade.Enderecos[0].DataValidadeInicial       := Now;
-          Entidade.Enderecos[0].DataValidadeFinal         := IncYear(Now, 100); // "sem validade" na prática
-          Entidade.Enderecos[0].EnderecoCertificado       := 'Não';
-          {------------------ CONTATOS ----------------------------------------------------------------}
-          SetLength(Entidade.Contatos, 0);
-          fdquerysql3.Close; fdquerysql3.SQL.Clear;
-          fdquerysql3.SQL.Text :=
-            'SELECT econt.EntCodContato, uge.geoentnome, uge.tipolograd, uge.geoentender, ' +
-            ' uge.geoenderno, uge.geoentendercomp, uge.geoentbair, uge.geocidcod, uge.geoentcep, ' +
-            ' uge.geotipofj, econt.EntContatoCelular, econt.EntContatoTelefone' +
-            ' FROM USER_geoapolo_entidade_contato econt WITH(NOLOCK)' +
-            ' INNER JOIN USER_geoapolo_entidade uge WITH(NOLOCK) ON econt.EntCodContato = uge.geoentcod' +
-            ' WHERE econt.geoentcod = :geoentcod';
-          fdquerysql3.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
-          if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-          begin
-            fdquerysql3.First;
-            if not fdquerysql3.EOF then
-            begin
-              SetLength(Entidade.Contatos, 1);
-              Entidade.Contatos[0].Operacao      := 'I';
-              Entidade.Contatos[0].Codigo        := fdquerysql3.FieldByName('EntCodContato').AsString;
-              Entidade.Contatos[0].Nome          := fdquerysql3.FieldByName('geoentnome').AsString;
-              Entidade.Contatos[0].Endereco      := fdquerysql3.FieldByName('geoentender').AsString;
-              Entidade.Contatos[0].NumeroEndereco:= fdquerysql3.FieldByName('geoentenderno').AsString;
-              Entidade.Contatos[0].Bairro        := fdquerysql3.FieldByName('geoentbair').AsString;
-              Entidade.Contatos[0].CodigoCidade  := fdquerysql3.FieldByName('geocidcod').AsString;
-              Entidade.Contatos[0].Cep           := fdquerysql3.FieldByName('geoentcep').AsString;
-              Entidade.Contatos[0].TipoFisicaJuridica := fdquerysql3.FieldByName('geotipofj').AsString;
-              Entidade.Contatos[0].Principal     := 'Sim';
-              Entidade.Contatos[0].CodigoStatus  := 'Ativo';
-              // CPFCNPJ, RGIE, Email: preencher quando souber a fonte certa
-              SetLength(Entidade.Contatos[0].Telefones, 1);
-              Entidade.Contatos[0].Telefones[0].Operacao  := 'I';
-              Entidade.Contatos[0].Telefones[0].Sequencia := 1;
-              Entidade.Contatos[0].Telefones[0].Numero    := fdquerysql3.FieldByName('EntContatoCelular').AsString;
-              Entidade.Contatos[0].Telefones[0].Principal := 'Sim';
-            end;
-          end;
-          {-------------------------------------------------------------------------------------------------------}
-          //SetLength(Entidade.Emails, 0);
-          fdquerysql3.Close; fdquerysql3.SQL.Clear;
-          fdquerysql3.SQL.Text :=
-            'SELECT * FROM USER_geoapolo_entidade_webcontato WHERE geoentcod = :geoentcod';
-          fdquerysql3.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
-          if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-          begin
-            i := 0; fdquerysql3.First;
-            while not fdquerysql3.EOF do
-            begin
-              SetLength(Entidade.Emails, i + 1);
-              Entidade.Emails[i].Operacao  := 'I';
-              Entidade.Emails[i].Sequencia := i + 1;
-              Entidade.Emails[i].Tipo      := 'COM';
-              Entidade.Emails[i].Email     := fdquerysql3.FieldByName('email').AsString;
-              Entidade.Emails[i].Principal := IfThen(i = 0, 'S', 'N');
-              Entidade.Emails[i].NFe       := 'Não';
-              Entidade.Emails[i].NFSe      := 'Não';
-              Entidade.Emails[i].Descricao := '';
-              Entidade.Emails[i].Url       := '';
-              Inc(i); fdquerysql3.Next;
-            end;
-          end;
-          Clipboard.AsText := Entidade.ToJSON.Format(2);
-          TFile.WriteAllText('c:\temp\dump_entidade_enviada.json', Entidade.ToJSON.Format(2));
-          {SetLength(Entidade.Enderecos, 0);
-          SetLength(Entidade.Contatos, 0);
-          SetLength(Entidade.Vendedores, 0);
-          SetLength(Entidade.Documentos, 0);  }
-          // Verifica se o usuario alvo ja esta configurado em memoria (frmprincipal.usucod_apolo).
-          // Caso nao esteja, busca no banco pelo codigo do usuario logado; se tambem nao houver
-          // registro no banco, solicita ao usuario o Usuario Alvo e a Senha Alvo (mascarada),
-          // criptografa a senha com a chave 35, grava no usuario correspondente e alimenta
-          // frmprincipal.usucod_apolo / frmprincipal.senha_alvo.
-          {frmprincipal.token_alvo := 'bwSqK1/9aFZw/Z5wM1xJWZtQ2W++bjMa+Q3NuTaBgmV2nsMscAocgAzqJxwBEbijLasbEeX9YOzZwviyfhpla9NRsSrDi9v6hAdUqQTYufcSW5TY7u9Y9kjYfJvlTwYKH9nlvUuyBIeIfx6MGPYLYdl4/bb4B6tVv5aGNSgCs4vTKmtpp7CeDgHByZg3iV6cxwbBNHaB5Q6S9DWGg6Jd+nu';
-          frmprincipal.token_alvo:= frmprincipal.token_alvo+'/j8lbLQav9ZvkqUIsESt6aLhpexqQrGGd/gQqhENd/X8Dq6lG68jdzfm9LV5uKgPSjNb1G1Yz0OzkM6lvjH0VYa3XOG/CpcLJxncY17c1rnw58CkTKpb3FsUrFjQgupoiQ4gOd4EavxIouxbEM3tLKaZPV6iMbALGPNC9pY1SyNgNmFD5M3t+V9B2/85+lV';
-          frmprincipal.token_alvo:= frmprincipal.token_alvo+'/neXdfIg94i8zk+5I5uml3WHwBmR4g9D/yE/kxno7UMh9JFu44aWZIZjca4plkYle5pI3Oc6sedTzziat1L4xZ8VHrJl/9nyaQQU0GjXFjxOcZBUTTyU0=';}
-          frmprincipal.token_alvo:='xo35ohxpaf5rXlU7d34YBFpAkZ5OFci+QFLlAbG4rO42Ew4S/RhGmhNmL3WJm1ImO+jgdkKB7K7mxVWKUdEaV72bO7JlLmBJUpD7tCa3S+/D12+7NNLog6EfraFlDGq34ag4oaFYBIRvgWoklHeJ4Vw/SLNLNYvZYmG31y5+MTUBk4Rfcfkytj60LEral+gdatIKfiuVn1KJzYdGQhLVMO6MBZ+Wm2tv7Iyc0GSvzfsZdU/x28QUSlmS';
-          frmprincipal.token_alvo:=frmprincipal.token_alvo+'tZ1IHV3dROKe7pPkR+cTo/j6FK8ZZ7OPRDSGLL4U8Er/E6sacRXCniYfOjSVDWyt3KJfGpkYOyNpx870eNLDzemKkkDYatbxglzgdkdMOBv+rDqVfrR9+2RM5mPfxQOZ592JVD1+CnpdMrRsm8Hfy8WoqjHAdCi1fDXkAtNGdWneL2VOdltIT0SkrgYtb0BFbAamaBBmGwE0o680Nwvrd/vsxlYHwHnYO';
-          frmprincipal.token_alvo:=frmprincipal.token_alvo+'129kWou56+aFCnXa4k5+lnEcuJe/x2BiZskDA2MlUYuaz8mgxga/rh7X+30y86OZyhH3Qe56FApUFcb6W7lGImf4zrc7LWRyV685htk';
-          if Trim(frmprincipal.usucod_apolo) = '' then
-          begin
-            fdquerysql3.Close;
-            fdquerysql3.SQL.Clear;
-            fdquerysql3.SQL.Text :='SELECT usucod_apolo, senha_alvo FROM USER_geoapolo_usuarios WHERE usucod = :codigousuario';
-            fdquerysql3.ParamByName('codigousuario').AsString := frmlogon.codigousuario;
-
-            if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) and
-               (Trim(fdquerysql3.FieldByName('usucod_apolo').AsString) <> '') and
-               (Trim(fdquerysql3.FieldByName('senha_alvo').AsString) <> '') then
+              ventcod := Trim(fdquerysql1.FieldByName('entcod').AsString);
+              if ventcod <> '' then
               begin
-                { Ja cadastrado no banco - apenas carrega em memoria }
-                frmprincipal.usucod_apolo := fdquerysql3.FieldByName('usucod_apolo').AsString;
-                frmprincipal.senha_alvo   := fdquerysql3.FieldByName('senha_alvo').AsString;
+                fdquerysql3.Close; fdquerysql3.SQL.Clear;
+                fdquerysql3.SQL.Text := 'UPDATE USER_geoapolo_entidade SET entcod = :entcod WHERE geoentcod = :geoentcod';
+                fdquerysql3.ParamByName('entcod').AsString    := ventcod;
+                fdquerysql3.ParamByName('geoentcod').AsString := fdqueryentidade.FieldByName('geoentcod').AsString;
+                executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
+              end;
+            end;
+          end;
+        end
+        else
+          ventcod := Trim(fdqueryentidade.FieldByName('entcod').AsString);
+
+        vgeoentcod := fdqueryentidade.FieldByName('geoentcod').AsString;
+
+        // Se já possui código no Alvo, abre tela de comparação lado a lado
+        if Trim(ventcod) <> '' then
+        begin
+          panel2.Visible := True; panel2.Top := 85; panel2.Left := 24; panel2.BringToFront; panel2.Refresh;
+          StringGrid1.Visible := True; StringGrid1.BringToFront;
+
+          fdquerysql22.Close; fdquerysql22.SQL.Clear;
+          fdquerysql22.SQL.Text := 'SELECT * FROM entidades_geoapolo WHERE geoentcod = :geoentcod';
+          fdquerysql22.ParamByName('geoentcod').AsString := vgeoentcod;
+          executaracao(fdquerysql22, fdbanco, true, dtsfdquerysql22);
+
+          fdquerysql23.Close; fdquerysql23.SQL.Clear;
+          fdquerysql23.SQL.Text := 'SELECT * FROM entidades_apolo WHERE entcod = :entcod';
+          fdquerysql23.ParamByName('entcod').AsString := ventcod;
+          executaracao(fdquerysql23, fdbanco, true, dtsfdquerysql23);
+
+          MontarTelaComparacao(fdquerysql22, fdquerysql23);
+          Exit;
+        end
+        else
+        begin
+          resp := MessageDlg('Confirma a exportação desta entidade para o Alvo ? (Y/N)', mtConfirmation, [mbYes, mbNo], 0);
+          if resp = idYes then
+          begin
+            API := TAlvoAPI.Create('https://alvo.rccbrasil.org.br/api/');
+            try
+              if not Self.GarantirAutenticacaoAlvo(API) then
+                Exit;
+
+              if not Self.GarantirContatoIntegradoAlvo(vgeoentcod, API, vEntCodContato, vErroContato) then
+              begin
+                MessageDlg(vErroContato, mtError, [mbOK], 0);
+                Exit;
+              end;
+
+              if not Self.MontarEntidadeParaEnvio(vgeoentcod, Entidade, vTratCod) then
+              begin
+                MessageDlg('Erro ao montar os dados da entidade para exportação.', mtError, [mbOK], 0);
+                Exit;
+              end;
+              if (vEntCodContato <> '') and (Length(Entidade.Contatos) > 0) then
+                Entidade.Contatos[0].Codigo := vEntCodContato;
+
+              if Entidade.ValorContribuicao = 0.0 then
+              begin
+                if MessageDlg('Atenção: O Valor de Contribuição desta entidade é R$ 0,00 para sua conferência.' + #13#10 +
+                              'Deseja realmente continuar com a exportação?', mtWarning, [mbYes, mbNo], 0) <> idYes then
+                  Exit;
+              end;
+
+              if API.InserirAlterarEntidade(Entidade, vMensagem) then
+              begin
+                vNovoEntCod := ExtrairEntCodResposta(vMensagem);
+                if vNovoEntCod <> '' then
+                  ventcod := vNovoEntCod;
+
+                Self.AtualizarEntidadeExportada(vgeoentcod, ventcod, vTratCod);
+                MessageDlg('Entidade exportada com sucesso!' + #13#10 + vMensagem, mtInformation, [mbOK], 0);
               end
-            else
-            begin
-              { Nao cadastrado - solicita ao usuario }
-              vusucodapolo := UpperCase(InputBox('Usuário Alvo',
-                'Informe o usuário de acesso ao Alvo:', ''));
-              if Trim(vusucodapolo) = '' then
+              else
               begin
-                messagedlg('Operação cancelada. Usuário alvo não foi informado.',
-                  mtwarning, [mbok], 0);
-                Exit;
+                TFile.WriteAllText('c:\temp\dump_erro_export.json', vMensagem);
+                MessageDlg('Erro ao exportar: ' + #13#10 + vMensagem, mtError, [mbOK], 0);
               end;
-
-              if not SolicitarSenhaMascarada('Senha do Usuário Alvo',
-                   'Informe a senha do usuário alvo (' + vusucodapolo + '):',
-                   vsenhaalvoplano) then
-              begin
-                messagedlg('Operação cancelada. Senha alvo não foi informada.',
-                  mtwarning, [mbok], 0);
-                Exit;
-              end;
-              vsenhaalvocriptografada := criptografia(35, vsenhaalvoplano);
-              fdquerysql3.Close; fdquerysql3.SQL.Clear;
-              fdquerysql3.SQL.Text :=
-                'UPDATE USER_geoapolo_usuarios SET usucod_apolo = :usucodapolo, ' +
-                'senha_alvo = :senhaalvo WHERE usucod = :codigousuario';
-              fdquerysql3.ParamByName('usucodapolo').AsString   := vusucodapolo;
-              fdquerysql3.ParamByName('senhaalvo').AsString     := vsenhaalvocriptografada;
-              fdquerysql3.ParamByName('codigousuario').AsString := frmlogon.codigousuario;
-
-              if not executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-              begin
-                messagedlg('Erro ao salvar os dados do usuário alvo!', mterror, [mbok], 0);
-                Exit;
-              end;
-
-              frmprincipal.usucod_apolo := vusucodapolo;
-              frmprincipal.senha_alvo   := vsenhaalvocriptografada;
+            finally
+              API.Free;
             end;
-          end;
-          panel2.Visible := True; panel2.Top := 85; panel2.Left := 24; panel2.Refresh;
-          API := TAlvoAPI.Create('https://alvo.rccbrasil.org.br/api/');
-          try
-            if frmprincipal.token_alvo = '' then
-                begin
-                  senhaalvo:=funcoes.decriptografia(35,frmprincipal.senha_alvo, frmprincipal.senhaapp);
-                  if not API.Login(frmprincipal.usucod_apolo, senhaalvo )then
-                  begin
-                    messagedlg('Falha ao autenticar no Alvo!', mterror, [mbok], 0);
-                    Exit;
-                  end;
-                  //frmprincipal.token_alvo := API.Token;
-                end
-            else
-              API.Token := frmprincipal.token_alvo;
-
-            if API.InserirAlterarEntidade(Entidade, vMensagem) then
-                begin
-                  showmessage(vmensagem);
-                  messagedlg('Entidade exportada com sucesso!' + #13 + vMensagem, mtinformation, [mbok], 0);
-                  fdquerysql3.Close; fdquerysql3.SQL.Clear;
-                  fdquerysql3.SQL.Text :=
-                    'UPDATE USER_geoapolo_entidade SET entcod = :entcod WHERE geoentcod = :geoentcod';
-                  fdquerysql3.ParamByName('entcod').AsString    := ventcod;
-                  fdquerysql3.ParamByName('geoentcod').AsString := vgeoentcod;
-                  executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
-                end
-            else
-              TFile.WriteAllText('c:\temp\dump_erro_export.json', vMensagem);
-              messagedlg('Erro ao exportar: ' + #13 + vMensagem, mterror, [mbok], 0);
-          finally
-            API.Free;
-            panel2.Visible := False;
           end;
         end;
+      end
+      else if cbobuscabanco.Text = 'Alvo' then
+      begin
+        MessageDlg('VOCÊ ESTÁ NA BASE ALVO E NÃO SERÁ PERMITIDA A EXPORTAÇÃO DA ENTIDADE !!!', mtError, [mbOK], 0);
+        Exit;
       end;
-    end
-    else if (cbobuscabanco.Text = 'GeoApolo') and
-            (fdqueryentidade.FieldByName('entobserevacoes').AsString <> '') then
-    begin
-      messagedlg('EXISTEM OBSERVAÇÕES QUE PRECISAM SER MODERADAS, DÊ DUPLO CLICK NA ENTIDADE E VERIFIQUE O CAMPO !!!',
-                 mterror, [mbok], 0);
-      Exit;
-    end
-    else if cbobuscabanco.Text = 'Alvo' then
-    begin
-      messagedlg('VOCÊ ESTÁ NA BASE ALVO E NÃO SERÁ PERMITIDA A EXPORTAÇÃO DA ENTIDADE !!!',
-                 mterror, [mbok], 0);
-      Exit;
     end;
+  finally
+    Screen.Cursor := crDefault;
   end;
 end;
 
@@ -925,234 +1490,138 @@ begin
 end;
 
 // =============================================================================
-// spbsobrepoealvoClick — monta o JSON de sobreposição para a API Alvo/Riosoft
-// Padronizado conforme o JSON modelo de resposta de Entidade/RetrieveDataSetPage:
-//   - Nomes de campo em PascalCase iguais aos retornados pela API (sem espaços,
-//     sem abreviações inventadas)
-//   - Telefones e Endereços residem em EntFoneChildList / EnderEntChildList,
-//     DENTRO de "Entidade1Object" (não no nível raiz da entidade)
-//   - Categorias residem em EntCategChildList, também dentro de Entidade1Object
+// spbsobrepoealvoClick - Atualiza a entidade existente no Alvo via API REST
 // =============================================================================
 procedure Tfrmentidades.spbsobrepoealvoClick(Sender: TObject);
 var
-  i, b: integer;
-  JsonObj, JsonEntidade, Entidade1Obj: TJSONObject;
-  TelefonesArray, EnderecosArray, CategoriasArray: TJSONArray;
-  TelefoneObj, CategoriaObj, EnderecoObj: TJSONObject;
-  Campo, Valor, cepvalor: string;
-  Entrada, ddd, numero, numerolimpo: string;
-  partes, telefones1, categorias1: TArray<string>;
+  API: TAlvoAPI;
+  Entidade: TEntidade;
+  vMensagem, vTratCod, vGeoEntCod, vEntCod: string;
+  vEntCodContato, vErroContato: string;
+  i, idxCampo: Integer;
+  valDecidido: string;
 begin
-  resp := messagedlg('Confirma a sobreposição destes dados, sobre os que estão no sistema Alvo ? (Y/N)',
-                     mtconfirmation, [mbyes, mbno], 0);
-  if resp <> idyes then
+  resp := MessageDlg('Confirma a sobreposição e envio destes dados para o Alvo ? (Sim / Não)',
+                     mtConfirmation, [mbYes, mbNo], 0);
+  if resp <> idYes then
     Exit;
 
-  cepvalor := '';
+  with modulo_dados do
+  begin
+    vGeoEntCod := Trim(fdqueryentidade.FieldByName('geoentcod').AsString);
+    vEntCod    := Trim(ventcod);
+    if vEntCod = '' then
+      vEntCod  := Trim(fdqueryentidade.FieldByName('entcod').AsString);
 
-  JsonObj        := TJSONObject.Create;
-  JsonEntidade   := TJSONObject.Create;
-  Entidade1Obj   := TJSONObject.Create;
-  CategoriasArray := TJSONArray.Create;
-  TelefonesArray  := TJSONArray.Create;
-  EnderecosArray  := TJSONArray.Create;
-  try
-    JsonObj.AddPair('Operacao', 'A');
-
-    // Natureza é sempre fixa neste fluxo (não depende do grid de comparação)
-    JsonEntidade.AddPair('Natureza', 'Consumidor');
-
-    for i := 1 to StringGrid1.RowCount - 1 do
+    if vGeoEntCod = '' then
     begin
-      Campo := ''; Valor := '';
+      MessageDlg('Código da entidade GeoApolo não identificado.', mtError, [mbOK], 0);
+      Exit;
+    end;
 
-      if SameText(StringGrid1.Cells[4, i], 'Sim') then
+    Screen.Cursor := crSQLWait;
+    API := TAlvoAPI.Create('https://alvo.rccbrasil.org.br/api/');
+    try
+      if not Self.GarantirAutenticacaoAlvo(API) then
+        Exit;
+
+      if not Self.GarantirContatoIntegradoAlvo(vGeoEntCod, API, vEntCodContato, vErroContato) then
       begin
-        Campo := StringGrid1.Cells[2, i];
-        Valor := StringGrid1.Cells[1, i];
-      end
-      else if SameText(StringGrid1.Cells[4, i], 'Não') then
-      begin
-        Campo := StringGrid1.Cells[2, i];
-        Valor := StringGrid1.Cells[3, i];
+        MessageDlg(vErroContato, mtError, [mbOK], 0);
+        Exit;
       end;
 
-      if Campo = '' then
+      if not Self.MontarEntidadeParaEnvio(vGeoEntCod, Entidade, vTratCod) then
+      begin
+        MessageDlg('Não foi possível montar os dados da entidade para envio.', mtError, [mbOK], 0);
+        Exit;
+      end;
+      if (vEntCodContato <> '') and (Length(Entidade.Contatos) > 0) then
+        Entidade.Contatos[0].Codigo := vEntCodContato;
+
+      if Entidade.ValorContribuicao = 0.0 then
+      begin
+        if MessageDlg('Atenção: O Valor de Contribuição desta entidade é R$ 0,00 para sua conferência.' + #13#10 +
+                      'Deseja realmente continuar com a alteração no Alvo?', mtWarning, [mbYes, mbNo], 0) <> idYes then
+          Exit;
+      end;
+
+      Entidade.Operacao := 'A'; // Alteração no Alvo
+      Entidade.Codigo   := vEntCod;
+
+    // Aplica as decisões tomadas na tela de comparação
+    for i := 0 to GTotalDiferentes - 1 do
+    begin
+      idxCampo := GLinhasDiferentes[i];
+      if (idxCampo < 0) or (idxCampo >= TOTAL_CAMPOS_MAPA) then
         Continue;
 
-      if UpperCase(Campo) = 'ENTCOD' then
-        JsonEntidade.AddPair('Codigo', Valor)
+      // Se o usuário escolheu manter o valor do Alvo:
+      if GDecisoes[i] = dlManterAlvo then
+        valDecidido := StringGrid1.Cells[2, i + 1]
+      else // Usar SVE (GeoApolo)
+        valDecidido := StringGrid1.Cells[1, i + 1];
 
-      else if UpperCase(Campo) = 'ENTCODALT' then
-        JsonEntidade.AddPair('CodigoAlternativo', Valor)
-
-      else if UpperCase(Campo) = 'TIPOTRATCOD' then
-        JsonEntidade.AddPair('CodigoTipoTratamento', Valor)
-
-      else if UpperCase(Campo) = 'ENTNOME' then
-        JsonEntidade.AddPair('Nome', Valor)
-
-      else if UpperCase(Campo) = 'ENTNOMEFANT' then
-        JsonEntidade.AddPair('NomeFantasia', Valor)
-
-      else if UpperCase(Campo) = 'ENTLOGRAD' then
-        JsonEntidade.AddPair('CodigoTipoLograd', Valor)
-
-      else if UpperCase(Campo) = 'ENTENDER' then
-        JsonEntidade.AddPair('Endereco', Valor)
-
-      else if UpperCase(Campo) = 'ENTENDERNO' then
-        JsonEntidade.AddPair('NumeroEndereco', Valor)
-
-      else if UpperCase(Campo) = 'ENTENDERCOMPL' then
-        JsonEntidade.AddPair('ComplementoEndereco', Valor)
-
-      else if UpperCase(Campo) = 'ENTBAIR' then
-        JsonEntidade.AddPair('Bairro', Valor)
-
-      else if UpperCase(Campo) = 'CIDCOD' then
-        JsonEntidade.AddPair('CodigoCidade', Valor)
-
-      else if UpperCase(Campo) = 'CEP' then
-      begin
-        cepvalor := Valor;
-        JsonEntidade.AddPair('Cep', Valor);
-      end
-
-      else if UpperCase(Campo) = 'ENTTIPOFJ' then
-      begin
-        // Modelo espera "Física" / "Jurídica" por extenso, não a sigla F/J
-        if UpperCase(Valor) = 'F' then
-          JsonEntidade.AddPair('Tipo', 'Física')
-        else if UpperCase(Valor) = 'J' then
-          JsonEntidade.AddPair('Tipo', 'Jurídica')
-        else
-          JsonEntidade.AddPair('Tipo', Valor);
-      end
-
-      else if UpperCase(Campo) = 'ENTCPFCGC' then
-        JsonEntidade.AddPair('CPFCNPJ', Valor)
-
-      else if UpperCase(Campo) = 'RGIE' then
-        JsonEntidade.AddPair('RGIE', Valor)
-
-      else if UpperCase(Campo) = 'ENTRGORDEXPED' then
-        JsonEntidade.AddPair('OrgaoExpedidor', Valor)
-
-      else if UpperCase(Campo) = 'ENTGENERO' then
-        JsonEntidade.AddPair('Genero', Valor)
-
-      else if UpperCase(Campo) = 'ENTREGCODESTR' then
-        JsonEntidade.AddPair('CodigoRegiao', Valor)
-
-      else if UpperCase(Campo) = 'ENTSTATDESCR' then
-        JsonEntidade.AddPair('StatusEntidade', Valor)
-
-      else if UpperCase(Campo) = 'ENTDATAANIVFUND' then
-        JsonEntidade.AddPair('DataFundacao', Valor)
-
-      else if (UpperCase(Campo) = 'GEOCATEGCODESTR') or (UpperCase(Campo) = 'CATEGCODESTR') then
-      begin
-        categorias1 := Valor.Split([',']);
-        for b := 0 to High(categorias1) do
+      case idxCampo of
+        0: Entidade.Nome := valDecidido;
+        1: Entidade.CPFCNPJ := valDecidido;
+        2: Entidade.RGIE := valDecidido;
+        3: Entidade.CodigoTipoLograd := valDecidido;
+        4:
         begin
-          categorias1[b] := Trim(categorias1[b]);
-          if categorias1[b] = '' then
-            Continue;
-          CategoriaObj := TJSONObject.Create;
-          CategoriaObj.AddPair('Operacao', 'I');
-          CategoriaObj.AddPair('Sequencia', TJSONNumber.Create(CategoriasArray.Count + 1));
-          CategoriaObj.AddPair('CodigoCategoria', categorias1[b]);
-          CategoriaObj.AddPair('AtivaTabelaPreco', 'Sim');
-          CategoriasArray.AddElement(CategoriaObj);
+          Entidade.Endereco := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].Endereco := valDecidido;
         end;
-      end
-
-      else if Campo.StartsWith('Telefone') then
-      begin
-        Entrada    := Valor;
-        telefones1 := Entrada.Split([',']);
-        for b := 0 to High(telefones1) do
+        5:
         begin
-          telefones1[b] := Trim(telefones1[b]);
-          if telefones1[b] = '' then
-            Continue;
-          ddd := ''; numero := '';
-          partes := telefones1[b].Split(['-']);
-          if Length(partes) = 2 then
-          begin
-            ddd    := Trim(partes[0]);
-            numero := Trim(partes[1]);
-          end
-          else
-            numero := telefones1[b];
-
-          numerolimpo := StringReplace(numero, '-', '', [rfReplaceAll]);
-
-          TelefoneObj := TJSONObject.Create;
-          TelefoneObj.AddPair('Operacao', 'I');
-          TelefoneObj.AddPair('Sequencia', TJSONNumber.Create(TelefonesArray.Count + 1));
-          TelefoneObj.AddPair('DDI', '+55');
-          TelefoneObj.AddPair('DDD', ddd);
-          TelefoneObj.AddPair('Numero', numerolimpo);
-          if b <= 1 then
-          begin
-            TelefoneObj.AddPair('Tipo', 'Residencial');
-            TelefoneObj.AddPair('TelefonePrincipal', 'Sim');
-          end
-          else
-          begin
-            TelefoneObj.AddPair('Tipo', 'Celular');
-            TelefoneObj.AddPair('TelefonePrincipal', 'Não');
-          end;
-          TelefonesArray.AddElement(TelefoneObj);
+          Entidade.NumeroEndereco := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].NumeroEndereco := valDecidido;
         end;
-      end
-
-      else if Campo.StartsWith('entender') then
-      begin
-        EnderecoObj := TJSONObject.Create;
-        EnderecoObj.AddPair('Operacao', 'I');
-        EnderecoObj.AddPair('Sequencia', TJSONNumber.Create(EnderecosArray.Count + 1));
-        EnderecoObj.AddPair('Cep', cepvalor);
-        EnderecoObj.AddPair('Endereco', Valor);
-        EnderecoObj.AddPair('Numero', '0');
-        EnderecoObj.AddPair('Complemento', '');
-        EnderecoObj.AddPair('Bairro', '');
-        EnderecoObj.AddPair('EnderecoEntrega', 'Sim');
-        EnderecoObj.AddPair('EnderecoCobranca', 'Não');
-        EnderecoObj.AddPair('EnderecoColeta', 'Não');
-        EnderecoObj.AddPair('NomeContato', '');
-        EnderecosArray.AddElement(EnderecoObj);
+        6:
+        begin
+          Entidade.ComplementoEndereco := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].ComplementoEndereco := valDecidido;
+        end;
+        7:
+        begin
+          Entidade.Bairro := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].Bairro := valDecidido;
+        end;
+        8:
+        begin
+          Entidade.Cep := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].Cep := valDecidido;
+        end;
+        9:
+        begin
+          Entidade.CodigoCidade := valDecidido;
+          if Length(Entidade.Enderecos) > 0 then
+            Entidade.Enderecos[0].CodigoCidade := valDecidido;
+        end;
+        13: Entidade.DataFundacao := valDecidido;
       end;
     end;
 
-    // Arrays filhos ficam dentro de "Entidade1Object", conforme o modelo
-    if TelefonesArray.Count > 0 then
-      Entidade1Obj.AddPair('EntFoneChildList', TelefonesArray)
-    else
-      TelefonesArray.Free;
-
-    if EnderecosArray.Count > 0 then
-      Entidade1Obj.AddPair('EnderEntChildList', EnderecosArray)
-    else
-      EnderecosArray.Free;
-
-    if CategoriasArray.Count > 0 then
-      Entidade1Obj.AddPair('EntCategChildList', CategoriasArray)
-    else
-      CategoriasArray.Free;
-
-    if Entidade1Obj.Count > 0 then
-      JsonEntidade.AddPair('Entidade1Object', Entidade1Obj)
-    else
-      Entidade1Obj.Free;
-
-    JsonObj.AddPair('Entidade', JsonEntidade);
-    TFile.WriteAllText('c:\temp\dump.json', JsonObj.Format(55));
-    panel2.Visible := False; panel2.Top := 300; panel2.Left := 24; panel2.Refresh;
-  finally
-    JsonObj.Free;
+      if API.InserirAlterarEntidade(Entidade, vMensagem) then
+      begin
+        Self.AtualizarEntidadeExportada(vGeoEntCod, vEntCod, vTratCod);
+        MessageDlg('Dados atualizados com sucesso no Alvo!' + #13#10 + vMensagem, mtInformation, [mbOK], 0);
+        panel2.Visible := False;
+      end
+      else
+      begin
+        TFile.WriteAllText('c:\temp\dump_erro_sobrepoe_alvo.json', vMensagem);
+        MessageDlg('Erro ao atualizar dados no Alvo: ' + #13#10 + vMensagem, mtError, [mbOK], 0);
+      end;
+    finally
+      API.Free;
+      Screen.Cursor := crDefault;
+    end;
   end;
 end;
 
@@ -1268,6 +1737,7 @@ end;
 procedure Tfrmentidades.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if Key = VK_F10 then spbsair.Click;
+  if Key = VK_INSERT then spbnovo.Click;
 end;
 
 // =============================================================================
@@ -1275,6 +1745,7 @@ end;
 // =============================================================================
 procedure Tfrmentidades.FormShow(Sender: TObject);
 begin
+  InicializarFiltroAvancado;
   with modulo_dados do
   begin
     try
@@ -1467,11 +1938,18 @@ begin
           if cbordem.Items.Count = 0 then
             cbordem.Items.Add('entnome');
 
-          sqlview :=
-            'SELECT * FROM entidades_apolo e WITH(NOLOCK)' +
-            ' WHERE e.' + vCampoBusca + ' LIKE :procurarpor' +
-            ' AND SUBSTRING(e.categcodestr, 1, 2) IN (' + QuotedStr('02') + ', ' + QuotedStr('03') + ')' +
-            ' ORDER BY e.' + cbordem.Text;
+          if SameText(vCampoBusca, 'categcodestr') or SameText(vCampoBusca, 'geocategcodestr') then
+            sqlview :=
+              'SELECT * FROM entidades_apolo e WITH(NOLOCK)' +
+              ' WHERE EXISTS (SELECT 1 FROM ENT_CATEG ec WITH (NOLOCK) WHERE ec.entcod = e.entcod AND ec.categcodestr = :procurarpor_exato)' +
+              ' AND SUBSTRING(e.categcodestr, 1, 2) IN (' + QuotedStr('02') + ', ' + QuotedStr('03') + ')' +
+              ' ORDER BY e.' + cbordem.Text
+          else
+            sqlview :=
+              'SELECT * FROM entidades_apolo e WITH(NOLOCK)' +
+              ' WHERE e.' + vCampoBusca + ' LIKE :procurarpor' +
+              ' AND SUBSTRING(e.categcodestr, 1, 2) IN (' + QuotedStr('02') + ', ' + QuotedStr('03') + ')' +
+              ' ORDER BY e.' + cbordem.Text;
           if rdgcrescente.Checked then sqlview := sqlview + ' ASC'
           else if rdgdecrescente.Checked then sqlview := sqlview + ' DESC';
         end;
@@ -1479,7 +1957,10 @@ begin
         fdqueryentidade.SQL.Clear;
         fdqueryentidade.SQL.Text := sqlview;
         // FIX 8: parâmetro sempre presente nas queries do Alvo
-        fdqueryentidade.ParamByName('procurarpor').AsString := '%' + lblprocurarpor.Text + '%';
+        if (SameText(vCampoBusca, 'categcodestr') or SameText(vCampoBusca, 'geocategcodestr')) then
+          fdqueryentidade.ParamByName('procurarpor_exato').AsString := Trim(lblprocurarpor.Text)
+        else
+          fdqueryentidade.ParamByName('procurarpor').AsString := '%' + lblprocurarpor.Text + '%';
 
         if executaracao(fdqueryentidade, fdbanco, True, dtsfdqueryentidade) then
         begin
@@ -1632,12 +2113,20 @@ begin
               cbordem.Items.Add('geoentnome');
               cbordem.ItemIndex := 0;
             end;
-          sqlview :=
-            'SELECT * FROM entidades_geoapolo e WITH(NOLOCK)' +
-            ' INNER JOIN user_geoapolo_entidade ue WITH(NOLOCK) ON e.geoentcod = ue.geoentcod' +
-            ' WHERE e.' + vCampoBusca + ' LIKE :procurarpor' +
-            ' ORDER BY CASE WHEN ue.atualizou_apolo = ' + QuotedStr('N') +
-            ' AND e.Entobservacoes IS NULL THEN 0 ELSE 1 END';
+          if SameText(vCampoBusca, 'categcodestr') or SameText(vCampoBusca, 'geocategcodestr') then
+            sqlview :=
+              'SELECT * FROM entidades_geoapolo e WITH(NOLOCK)' +
+              ' INNER JOIN user_geoapolo_entidade ue WITH(NOLOCK) ON e.geoentcod = ue.geoentcod' +
+              ' WHERE EXISTS (SELECT 1 FROM USER_geoapolo_entcateg uec WITH (NOLOCK) WHERE uec.geoentcod = e.geoentcod AND uec.geocategcodestr = :procurarpor_exato)' +
+              ' ORDER BY CASE WHEN ue.atualizou_apolo = ' + QuotedStr('N') +
+              ' AND e.Entobservacoes IS NULL THEN 0 ELSE 1 END'
+          else
+            sqlview :=
+              'SELECT * FROM entidades_geoapolo e WITH(NOLOCK)' +
+              ' INNER JOIN user_geoapolo_entidade ue WITH(NOLOCK) ON e.geoentcod = ue.geoentcod' +
+              ' WHERE e.' + vCampoBusca + ' LIKE :procurarpor' +
+              ' ORDER BY CASE WHEN ue.atualizou_apolo = ' + QuotedStr('N') +
+              ' AND e.Entobservacoes IS NULL THEN 0 ELSE 1 END';
         end;
 
         fdqueryentidade.SQL.Clear;
@@ -1645,7 +2134,12 @@ begin
 
         // FIX 8: parâmetro só atribuído quando existe na query
         if tipo_pesquisa = 'Especifica' then
-          fdqueryentidade.ParamByName('procurarpor').AsString := '%' + lblprocurarpor.Text + '%';
+        begin
+          if (SameText(vCampoBusca, 'categcodestr') or SameText(vCampoBusca, 'geocategcodestr')) then
+            fdqueryentidade.ParamByName('procurarpor_exato').AsString := Trim(lblprocurarpor.Text)
+          else
+            fdqueryentidade.ParamByName('procurarpor').AsString := '%' + lblprocurarpor.Text + '%';
+        end;
 
         if executaracao(fdqueryentidade, fdbanco, True, dtsfdqueryentidade) then
         begin
@@ -1698,10 +2192,15 @@ begin
 
     with frmcadentidade do
     begin
-      if (fdqueryentidade.FieldByName('entcod').AsString = '') or (fdqueryentidade.FieldByName('entcod').IsNull) then
-        lblentcod.Text := fdqueryentidade.FieldByName('geoentcod').AsString
-      else
-        lblentcod.Text := fdqueryentidade.FieldByName('entcod').AsString;
+      Caption := Format('Manutenção de Entidade: [Geo: %s | Alvo: %s] %s',
+        [fdqueryentidade.FieldByName('geoentcod').AsString,
+         fdqueryentidade.FieldByName('entcod').AsString,
+         fdqueryentidade.FieldByName('entnome').AsString]);
+
+      lblentcod.Text := fdqueryentidade.FieldByName('geoentcod').AsString;
+      StatusBar1.Panels[1].Text := Format('Geo: %s | Alvo: %s',
+        [fdqueryentidade.FieldByName('geoentcod').AsString,
+         fdqueryentidade.FieldByName('entcod').AsString]);
 
       cin1.ActivePageIndex := 0;
       lbltipotrat.Text         := fdqueryentidade.FieldByName('tipotratcod').AsString;
@@ -1830,7 +2329,7 @@ begin
     if not fdquerysql19.IsEmpty then
     begin
       fdquerysql20.Close;
-      fdquerysql20.SQL.Text := 'SELECT entcod FROM entidade_geoapolo WHERE entcpfcgc = :cpf';
+      fdquerysql20.SQL.Text := 'SELECT TOP 1 entcod FROM entidades_apolo WITH (NOLOCK) WHERE entcpfcgc = :cpf';
       fdquerysql20.ParamByName('cpf').AsString := fdquerysql19.FieldByName('geonumerodocumento').AsString;
       fdquerysql20.Open;
       if not fdquerysql20.IsEmpty then
@@ -2177,13 +2676,7 @@ begin
   begin
     if Key = VK_INSERT then
     begin
-      application.CreateForm(TfrmCadEntidade, frmcadentidade);
-      frmcadentidade.controle := 'INCLUSÃO';
-      if (integraentidadeapolo = 'Mescla') or (integraentidadeapolo = 'Não Integra') then
-        frmcadentidade.lblentcod.Text := geoapolo_configcod(frmprincipal.codigo_empresa,'USER_geoapolo_entidade', 'Sim')
-      else if integraentidadeapolo = 'Integra' then
-        frmcadentidade.lblentcod.Text := entcod_apolo_busca('S', frmcadentidade);
-      frmcadentidade.ShowModal;
+      spbnovo.Click;
     end;
 
     if Key = VK_DELETE then
@@ -2255,6 +2748,19 @@ begin
     else
       carrega_lista_entidades(cbobuscabanco.Text, 'Consulta', '');
   end;
+end;
+
+procedure Tfrmentidades.spblimparClick(Sender: TObject);
+begin
+  lblprocurarpor.Clear;
+  if cbocampo.Items.Count > 0 then
+    cbocampo.ItemIndex := 0;
+  if cbordem.Items.Count > 0 then
+    cbordem.ItemIndex := 0;
+  rdgcrescente.Checked := True;
+  carrega_lista_entidades(cbobuscabanco.Text, 'Consulta', '');
+  if lblprocurarpor.CanFocus then
+    lblprocurarpor.SetFocus;
 end;
 
 // =============================================================================
@@ -2413,6 +2919,498 @@ begin
       on E: Exception do
         ShowMessage('Erro ao configurar grid: ' + E.Message);
     end;
+  end;
+end;
+
+// =============================================================================
+// spbexportarloteClick - Exportação em lote para o Alvo
+// =============================================================================
+procedure Tfrmentidades.spbexportarloteClick(Sender: TObject);
+var
+  API: TAlvoAPI;
+  Entidade: TEntidade;
+  vMensagem, vNovoEntCod, vTratCod, vGeoEntCod, vEntCod, vNomeEntidade: string;
+  vEntCodContato, vErroContato, vLogFileName, vLogPath, vMsgConfirm: string;
+  LogErros: TStringList;
+  TotalRegs, Sucessos, Falhas, Pendencias, TotalZerados: Integer;
+  vBk: TBookmark;
+begin
+  if cbobuscabanco.Text <> 'GeoApolo' then
+  begin
+    MessageDlg('A exportação em lote só é permitida na base GeoApolo.', mtWarning, [mbOK], 0);
+    Exit;
+  end;
+
+  if not modulo_dados.fdqueryentidade.Active or (modulo_dados.fdqueryentidade.RecordCount = 0) then
+  begin
+    MessageDlg('Não há entidades filtradas na lista para exportar.', mtWarning, [mbOK], 0);
+    Exit;
+  end;
+
+  TotalRegs := modulo_dados.fdqueryentidade.RecordCount;
+  TotalZerados := 0;
+  vBk := modulo_dados.fdqueryentidade.GetBookmark;
+  try
+    modulo_dados.fdqueryentidade.First;
+    while not modulo_dados.fdqueryentidade.Eof do
+    begin
+      if (modulo_dados.fdqueryentidade.FindField('USERValor_Contribuicao') = nil) or
+         (modulo_dados.fdqueryentidade.FieldByName('USERValor_Contribuicao').AsFloat = 0.0) then
+        Inc(TotalZerados);
+      modulo_dados.fdqueryentidade.Next;
+    end;
+  finally
+    if modulo_dados.fdqueryentidade.BookmarkValid(vBk) then
+    begin
+      modulo_dados.fdqueryentidade.GotoBookmark(vBk);
+      modulo_dados.fdqueryentidade.FreeBookmark(vBk);
+    end;
+  end;
+
+  vMsgConfirm := Format('Deseja exportar todas as %d Entidades abaixo para o Alvo ?', [TotalRegs]);
+  if TotalZerados > 0 then
+    vMsgConfirm := vMsgConfirm + #13#10 + #13#10 +
+      Format('ATENÇÃO: Existem %d entidades com Valor de Contribuição igual a R$ 0,00 para sua conferência.', [TotalZerados]) + #13#10 +
+      'Deseja prosseguir com a exportação?';
+
+  if MessageDlg(vMsgConfirm, mtConfirmation, [mbYes, mbNo], 0) <> mrYes then
+    Exit;
+
+  Screen.Cursor := crHourGlass;
+  LogErros := TStringList.Create;
+  API := TAlvoAPI.Create('https://alvo.rccbrasil.org.br/api/');
+  try
+    if not Self.GarantirAutenticacaoAlvo(API) then
+      Exit;
+
+    Sucessos   := 0;
+    Falhas     := 0;
+    Pendencias := 0;
+
+    LogErros.Add('======================================================================');
+    LogErros.Add('LOG DE EXPORTAÇÃO EM LOTE PARA O ALVO - GEOAPOLO');
+    LogErros.Add('Data/Hora: ' + FormatDateTime('dd/mm/yyyy hh:nn:ss', Now));
+    LogErros.Add(Format('Total de Registros a Processar: %d', [TotalRegs]));
+    LogErros.Add('======================================================================');
+    LogErros.Add('');
+
+    modulo_dados.fdqueryentidade.First;
+    while not modulo_dados.fdqueryentidade.Eof do
+    begin
+      vGeoEntCod    := modulo_dados.fdqueryentidade.FieldByName('geoentcod').AsString;
+      vNomeEntidade := modulo_dados.fdqueryentidade.FieldByName('entnome').AsString;
+      vEntCod       := Trim(modulo_dados.fdqueryentidade.FieldByName('entcod').AsString);
+
+      // 1. Verifica se tem pendências moderadas
+      if Pos('[PEND', UpperCase(modulo_dados.fdqueryentidade.FieldByName('entobservacoes').AsString)) > 0 then
+      begin
+        Inc(Pendencias);
+        LogErros.Add(Format('[IGNORADA - PENDÊNCIAS] GeoCod: %s | Nome: %s | Motivo: Possui [PENDÊNCIAS] registradas no cadastro.',
+                            [vGeoEntCod, vNomeEntidade]));
+        modulo_dados.fdqueryentidade.Next;
+        Application.ProcessMessages;
+        Continue;
+      end;
+
+      // 2. Se entcod vazio, tenta achar via CPF
+      if vEntCod = '' then
+      begin
+        with modulo_dados do
+        begin
+          fdquerysql18.Close; fdquerysql18.SQL.Clear;
+          fdquerysql18.SQL.Text :=
+            'SELECT geonumerodocumento FROM USER_geoapolo_entidade_documentos WITH (NOLOCK) ' +
+            ' WHERE geoentcod = :geoentcod AND geotipodocumento LIKE ''%CPF/CNPJ%''';
+          fdquerysql18.ParamByName('geoentcod').AsString := vGeoEntCod;
+          if executaracao(fdquerysql18, fdbanco, true, dtsfdquerysql18) and (not fdquerysql18.IsEmpty) then
+          begin
+            fdquerysql1.Close; fdquerysql1.SQL.Clear;
+            fdquerysql1.SQL.Text := 'SELECT entcod FROM entidades_geoapolo WHERE entcpfcgc = :geonumerodocumento';
+            fdquerysql1.ParamByName('geonumerodocumento').AsString := fdquerysql18.FieldByName('geonumerodocumento').AsString;
+            if executaracao(fdquerysql1, fdbanco, true, dtsfdquerysql1) and (not fdquerysql1.IsEmpty) then
+              vEntCod := Trim(fdquerysql1.FieldByName('entcod').AsString);
+          end;
+        end;
+      end;
+
+      // 2.5. Garante contato integrado no Alvo (busca CPF ou integra primeiro)
+      if not Self.GarantirContatoIntegradoAlvo(vGeoEntCod, API, vEntCodContato, vErroContato) then
+      begin
+        Inc(Falhas);
+        LogErros.Add(Format('[FALHA - CONTATO] GeoCod: %s | Nome: %s | Motivo: %s',
+                            [vGeoEntCod, vNomeEntidade, vErroContato]));
+        modulo_dados.fdqueryentidade.Next;
+        Application.ProcessMessages;
+        Continue;
+      end;
+
+      // 3. Monta dados da entidade
+      if not Self.MontarEntidadeParaEnvio(vGeoEntCod, Entidade, vTratCod) then
+      begin
+        Inc(Falhas);
+        LogErros.Add(Format('[FALHA - MONTAGEM] GeoCod: %s | Nome: %s | Motivo: Erro ao carregar dependências da entidade.',
+                            [vGeoEntCod, vNomeEntidade]));
+        modulo_dados.fdqueryentidade.Next;
+        Application.ProcessMessages;
+        Continue;
+      end;
+      if (vEntCodContato <> '') and (Length(Entidade.Contatos) > 0) then
+        Entidade.Contatos[0].Codigo := vEntCodContato;
+
+      if vEntCod <> '' then
+      begin
+        Entidade.Operacao := 'A';
+        Entidade.Codigo   := vEntCod;
+      end
+      else
+      begin
+        Entidade.Operacao := 'I';
+        Entidade.Codigo   := '';
+      end;
+
+      // 4. Chamada da API REST Alvo
+      if API.InserirAlterarEntidade(Entidade, vMensagem) then
+      begin
+        vNovoEntCod := ExtrairEntCodResposta(vMensagem);
+        if vNovoEntCod <> '' then
+          vEntCod := vNovoEntCod;
+
+        Self.AtualizarEntidadeExportada(vGeoEntCod, vEntCod, vTratCod);
+        Inc(Sucessos);
+      end
+      else
+      begin
+        Inc(Falhas);
+        LogErros.Add(Format('[ERRO - API ALVO] GeoCod: %s | Nome: %s | Detalhes: %s',
+                            [vGeoEntCod, vNomeEntidade, vMensagem]));
+      end;
+
+      // Move cursor no grid e atualiza interface sem abrir janelas modais
+      modulo_dados.fdqueryentidade.Next;
+      Application.ProcessMessages;
+    end;
+
+    // 5. Finalização e Log
+    if (Falhas > 0) or (Pendencias > 0) then
+    begin
+      vLogPath := ExtractFilePath(Application.ExeName);
+      if not DirectoryExists(vLogPath) then
+        vLogPath := ExtractFilePath(ParamStr(0));
+      vLogFileName := vLogPath + 'log_exportacao_alvo_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.txt';
+
+      LogErros.Add('');
+      LogErros.Add(Format('Resumo: Sucessos = %d, Falhas = %d, Ignoradas (Pendências) = %d', [Sucessos, Falhas, Pendencias]));
+      try
+        LogErros.SaveToFile(vLogFileName);
+      except
+        vLogFileName := 'c:\temp\log_exportacao_alvo_' + FormatDateTime('yyyymmdd_hhnnss', Now) + '.txt';
+        LogErros.SaveToFile(vLogFileName);
+      end;
+
+      MessageDlg(Format('Exportação em lote finalizada!' + #13#10 +
+                        'Sucessos: %d' + #13#10 +
+                        'Falhas: %d' + #13#10 +
+                        'Ignoradas (Pendências): %d' + #13#10#13#10 +
+                        'O arquivo com o detalhamento dos erros foi gravado em:' + #13#10 + '%s',
+                        [Sucessos, Falhas, Pendencias, vLogFileName]),
+                 mtWarning, [mbOK], 0);
+    end
+    else
+    begin
+      MessageDlg(Format('Exportação em lote de todas as %d entidades concluída com 100%% de sucesso!', [Sucessos]),
+                 mtInformation, [mbOK], 0);
+    end;
+
+  finally
+    LogErros.Free;
+    API.Free;
+    Screen.Cursor := crDefault;
+  end;
+end;
+
+// =============================================================================
+// Filtro Avançado Multi-Campos
+// =============================================================================
+procedure Tfrmentidades.InicializarFiltroAvancado;
+begin
+  if not Assigned(gridCondicoes) then Exit;
+  gridCondicoes.ColCount := 4;
+  gridCondicoes.RowCount := 1;
+  gridCondicoes.Cells[0, 0] := 'Conector';
+  gridCondicoes.Cells[1, 0] := 'Campo';
+  gridCondicoes.Cells[2, 0] := 'Operador';
+  gridCondicoes.Cells[3, 0] := 'Valor';
+  gridCondicoes.ColWidths[0] := 65;
+  gridCondicoes.ColWidths[1] := 200;
+  gridCondicoes.ColWidths[2] := 140;
+  gridCondicoes.ColWidths[3] := 450;
+  if cboFiltroConector.Items.Count > 0 then cboFiltroConector.ItemIndex := 0;
+  if cboFiltroCampo.Items.Count > 0 then cboFiltroCampo.ItemIndex := 0;
+  if cboFiltroOperador.Items.Count > 0 then cboFiltroOperador.ItemIndex := 0;
+  edtFiltroValor.Clear;
+end;
+
+procedure Tfrmentidades.spbfiltroavancadoClick(Sender: TObject);
+begin
+  pnlFiltroAvancado.Visible := not pnlFiltroAvancado.Visible;
+  if pnlFiltroAvancado.Visible then
+  begin
+    pnlFiltroAvancado.BringToFront;
+    if gridCondicoes.RowCount <= 1 then
+      InicializarFiltroAvancado;
+  end;
+end;
+
+procedure Tfrmentidades.spbnovoClick(Sender: TObject);
+begin
+  Application.CreateForm(TfrmCadEntidade, frmcadentidade);
+  frmcadentidade.controle := 'INCLUSÃO';
+  if (integraentidadeapolo = 'Mescla') or (integraentidadeapolo = 'Não Integra') then
+    frmcadentidade.lblentcod.Text := geoapolo_configcod(frmprincipal.codigo_empresa, 'USER_geoapolo_entidade', 'Sim')
+  else if integraentidadeapolo = 'Integra' then
+    frmcadentidade.lblentcod.Text := entcod_apolo_busca('S', frmcadentidade);
+  frmcadentidade.ShowModal;
+  if cbobuscabanco.Text <> '' then
+    carrega_lista_entidades(cbobuscabanco.Text, 'Consulta', '');
+end;
+
+procedure Tfrmentidades.btnFecharFiltroAvancadoClick(Sender: TObject);
+begin
+  pnlFiltroAvancado.Visible := False;
+end;
+
+procedure Tfrmentidades.btnAdicionarCondicaoClick(Sender: TObject);
+var
+  R: Integer;
+begin
+  if cboFiltroCampo.ItemIndex < 0 then
+  begin
+    MessageDlg('Selecione um campo para o filtro.', mtWarning, [mbOK], 0);
+    Exit;
+  end;
+  if cboFiltroOperador.ItemIndex < 0 then
+  begin
+    MessageDlg('Selecione um operador.', mtWarning, [mbOK], 0);
+    Exit;
+  end;
+  if (cboFiltroOperador.ItemIndex < 6) and (Trim(edtFiltroValor.Text) = '') then
+  begin
+    MessageDlg('Informe o valor para a condição.', mtWarning, [mbOK], 0);
+    edtFiltroValor.SetFocus;
+    Exit;
+  end;
+
+  R := gridCondicoes.RowCount;
+  gridCondicoes.RowCount := R + 1;
+  if R = 1 then
+    gridCondicoes.Cells[0, R] := 'ONDE'
+  else
+    gridCondicoes.Cells[0, R] := cboFiltroConector.Text;
+
+  gridCondicoes.Cells[1, R] := cboFiltroCampo.Text;
+  gridCondicoes.Cells[2, R] := cboFiltroOperador.Text;
+  gridCondicoes.Cells[3, R] := edtFiltroValor.Text;
+
+  edtFiltroValor.Clear;
+  edtFiltroValor.SetFocus;
+end;
+
+procedure Tfrmentidades.btnRemoverCondicaoClick(Sender: TObject);
+var
+  i, SelRow: Integer;
+begin
+  SelRow := gridCondicoes.Row;
+  if (SelRow <= 0) or (gridCondicoes.RowCount <= 1) then Exit;
+
+  for i := SelRow to gridCondicoes.RowCount - 2 do
+  begin
+    gridCondicoes.Cells[0, i] := gridCondicoes.Cells[0, i + 1];
+    gridCondicoes.Cells[1, i] := gridCondicoes.Cells[1, i + 1];
+    gridCondicoes.Cells[2, i] := gridCondicoes.Cells[2, i + 1];
+    gridCondicoes.Cells[3, i] := gridCondicoes.Cells[3, i + 1];
+  end;
+  gridCondicoes.RowCount := gridCondicoes.RowCount - 1;
+  if gridCondicoes.RowCount > 1 then
+    gridCondicoes.Cells[0, 1] := 'ONDE';
+end;
+
+procedure Tfrmentidades.btnLimparCondicoesClick(Sender: TObject);
+begin
+  InicializarFiltroAvancado;
+end;
+
+procedure Tfrmentidades.btnAtalhoGOPendentesClick(Sender: TObject);
+begin
+  InicializarFiltroAvancado;
+  gridCondicoes.RowCount := 4;
+
+  gridCondicoes.Cells[0, 1] := 'ONDE';
+  gridCondicoes.Cells[1, 1] := 'Categoria (Nome)';
+  gridCondicoes.Cells[2, 1] := 'Contém';
+  gridCondicoes.Cells[3, 1] := 'GRUPO DE ORAÇÃO';
+
+  gridCondicoes.Cells[0, 2] := 'E';
+  gridCondicoes.Cells[1, 2] := 'Status Exportação Alvo (atualizou_apolo)';
+  gridCondicoes.Cells[2, 2] := 'Diferente de';
+  gridCondicoes.Cells[3, 2] := 'S';
+
+  gridCondicoes.Cells[0, 3] := 'E';
+  gridCondicoes.Cells[1, 3] := 'Código Alvo (entcod)';
+  gridCondicoes.Cells[2, 3] := 'Está Vazio / Nulo';
+  gridCondicoes.Cells[3, 3] := '';
+
+  btnAplicarFiltroAvancadoClick(Sender);
+end;
+
+procedure Tfrmentidades.btnRestaurarFiltroPadraoClick(Sender: TObject);
+begin
+  pnlFiltroAvancado.Visible := False;
+  carrega_lista_entidades('GeoApolo', 'Consulta', '');
+  ConfigurarGridCompleto('GeoApolo');
+end;
+
+procedure Tfrmentidades.btnAplicarFiltroAvancadoClick(Sender: TObject);
+var
+  i: Integer;
+  sWhere, sCond, sConector, sCampo, sOp, sVal, sColSQL: string;
+begin
+  if gridCondicoes.RowCount <= 1 then
+  begin
+    MessageDlg('Nenhuma condição foi adicionada para o filtro.', mtWarning, [mbOK], 0);
+    Exit;
+  end;
+
+  sWhere := '';
+  for i := 1 to gridCondicoes.RowCount - 1 do
+  begin
+    sConector := UpperCase(Trim(gridCondicoes.Cells[0, i]));
+    sCampo    := Trim(gridCondicoes.Cells[1, i]);
+    sOp       := Trim(gridCondicoes.Cells[2, i]);
+    sVal      := Trim(gridCondicoes.Cells[3, i]);
+
+    if SameText(sCampo, 'Categoria (Nome)') then
+      sColSQL := 'e.categnome'
+    else if SameText(sCampo, 'Categoria (Código)') then
+      sColSQL := 'e.categcodestr'
+    else if SameText(sCampo, 'Código Alvo (entcod)') then
+      sColSQL := 'e.entcod'
+    else if SameText(sCampo, 'Status Exportação Alvo (atualizou_apolo)') then
+      sColSQL := 'ue.atualizou_apolo'
+    else if SameText(sCampo, 'Nome da Entidade') then
+      sColSQL := 'e.entnome'
+    else if SameText(sCampo, 'Nome Fantasia') then
+      sColSQL := 'e.entnomefant'
+    else if SameText(sCampo, 'CPF / CNPJ') then
+      sColSQL := 'e.entcpfcgc'
+    else if SameText(sCampo, 'RG / IE') then
+      sColSQL := 'e.entrgie'
+    else if SameText(sCampo, 'Cidade') then
+      sColSQL := 'e.cidnomecomp'
+    else if SameText(sCampo, 'Estado (UF)') then
+      sColSQL := 'e.ufsigla'
+    else if SameText(sCampo, 'Bairro') then
+      sColSQL := 'e.entbair'
+    else if SameText(sCampo, 'CEP') then
+      sColSQL := 'e.entcep'
+    else if SameText(sCampo, 'Gênero') then
+      sColSQL := 'e.entgenero'
+    else if SameText(sCampo, 'Estado Civil') then
+      sColSQL := 'e.entestcivil'
+    else if SameText(sCampo, 'Observações') then
+      sColSQL := 'e.entobservacoes'
+    else
+      sColSQL := 'e.entnome';
+
+    if SameText(sCampo, 'Categoria (Código)') then
+    begin
+      if SameText(sOp, 'Diferente de') then
+        sCond := 'NOT EXISTS (SELECT 1 FROM USER_geoapolo_entcateg uec WITH (NOLOCK) WHERE uec.geoentcod = e.geoentcod AND uec.geocategcodestr = ' + QuotedStr(sVal) + ')'
+      else if SameText(sOp, 'Está Vazio / Nulo') then
+        sCond := 'NOT EXISTS (SELECT 1 FROM USER_geoapolo_entcateg uec WITH (NOLOCK) WHERE uec.geoentcod = e.geoentcod)'
+      else if SameText(sOp, 'Não Está Vazio') then
+        sCond := 'EXISTS (SELECT 1 FROM USER_geoapolo_entcateg uec WITH (NOLOCK) WHERE uec.geoentcod = e.geoentcod)'
+      else
+        // Filtro exato na categoria selecionada sem trazer níveis abaixo
+        sCond := 'EXISTS (SELECT 1 FROM USER_geoapolo_entcateg uec WITH (NOLOCK) WHERE uec.geoentcod = e.geoentcod AND uec.geocategcodestr = ' + QuotedStr(sVal) + ')';
+    end
+    else
+    begin
+      if SameText(sOp, 'Contém') then
+        sCond := sColSQL + ' LIKE ' + QuotedStr('%' + sVal + '%')
+      else if SameText(sOp, 'Não Contém') then
+        sCond := '(' + sColSQL + ' NOT LIKE ' + QuotedStr('%' + sVal + '%') + ' OR ' + sColSQL + ' IS NULL)'
+      else if SameText(sOp, 'Igual a') then
+        sCond := sColSQL + ' = ' + QuotedStr(sVal)
+      else if SameText(sOp, 'Diferente de') then
+        sCond := '(' + sColSQL + ' <> ' + QuotedStr(sVal) + ' OR ' + sColSQL + ' IS NULL)'
+      else if SameText(sOp, 'Começa com') then
+        sCond := sColSQL + ' LIKE ' + QuotedStr(sVal + '%')
+      else if SameText(sOp, 'Termina com') then
+        sCond := sColSQL + ' LIKE ' + QuotedStr('%' + sVal)
+      else if SameText(sOp, 'Está Vazio / Nulo') then
+        sCond := '(' + sColSQL + ' IS NULL OR RTRIM(LTRIM(' + sColSQL + ')) = '''')'
+      else if SameText(sOp, 'Não Está Vazio') then
+        sCond := '(' + sColSQL + ' IS NOT NULL AND RTRIM(LTRIM(' + sColSQL + ')) <> '''')'
+      else
+        sCond := sColSQL + ' LIKE ' + QuotedStr('%' + sVal + '%');
+    end;
+
+    if sWhere = '' then
+      sWhere := '(' + sCond + ')'
+    else
+    begin
+      if (sConector = 'OU') or (sConector = 'OR') then
+        sWhere := sWhere + ' OR (' + sCond + ')'
+      else
+        sWhere := sWhere + ' AND (' + sCond + ')';
+    end;
+  end;
+
+  Self.AplicarFiltroAvancadoSQL(sWhere);
+  ConfigurarGridCompleto('GeoApolo');
+end;
+
+// =============================================================================
+// AplicarFiltroAvancadoSQL
+// Executa a query com a cláusula WHERE montada pelas condições do filtro
+// =============================================================================
+procedure Tfrmentidades.AplicarFiltroAvancadoSQL(const AWhereClause: string);
+var
+  sqlview: string;
+begin
+  if cbobuscabanco.Text <> 'GeoApolo' then
+  begin
+    MessageDlg('O filtro avançado multi-campos está disponível para a base GeoApolo.', mtInformation, [mbOK], 0);
+    Exit;
+  end;
+
+  Screen.Cursor := crSQLWait;
+  try
+    sqlview :=
+      'SELECT * FROM entidades_geoapolo e WITH(NOLOCK)' +
+      ' INNER JOIN user_geoapolo_entidade ue WITH(NOLOCK) ON e.geoentcod = ue.geoentcod';
+
+    if Trim(AWhereClause) <> '' then
+      sqlview := sqlview + ' WHERE ' + AWhereClause
+    else
+      sqlview := sqlview + ' WHERE (ue.atualizou_apolo IS NULL OR ue.atualizou_apolo <> ''S'')';
+
+    sqlview := sqlview +
+      ' ORDER BY CASE WHEN ue.atualizou_apolo = ''N'' ' +
+      ' AND (e.Entobservacoes IS NULL OR e.Entobservacoes NOT LIKE ''%[PEND%NCIAS]%'') THEN 0 ELSE 1 END';
+
+    modulo_dados.fdqueryentidade.Close;
+    modulo_dados.fdqueryentidade.SQL.Clear;
+    modulo_dados.fdqueryentidade.SQL.Text := sqlview;
+    modulo_dados.fdqueryentidade.Open;
+
+    lblmensagemgeoapolo.Caption := Format('%d registros encontrados no filtro avançado.', [modulo_dados.fdqueryentidade.RecordCount]);
+    if modulo_dados.fdqueryentidade.RecordCount = 0 then
+      lblmensagemgeoapolo.Font.Color := clMaroon
+    else
+      lblmensagemgeoapolo.Font.Color := clNavy;
+  finally
+    Screen.Cursor := crDefault;
   end;
 end;
 

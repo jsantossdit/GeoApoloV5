@@ -11,6 +11,7 @@ type
   Tfrmcadcategoria = class(TForm)
     panelmenu: TPanel;
     spbsalvar: TSpeedButton;
+    spbnovo: TSpeedButton;
     spbligacoes: TSpeedButton;
     spbsair: TSpeedButton;
     spblimpar: TSpeedButton;
@@ -45,6 +46,7 @@ type
       Shift: TShiftState);
     procedure lblcodcategaltEnter(Sender: TObject);
     procedure spbsalvarClick(Sender: TObject);
+    procedure spbnovoClick(Sender: TObject);
     procedure chkgrupoClick(Sender: TObject);
     procedure spblimparClick(Sender: TObject);
     procedure gridcategoriasDblClick(Sender: TObject);
@@ -126,6 +128,8 @@ procedure Tfrmcadcategoria.FormKeyUp(Sender: TObject; var Key: Word;
 begin
    if key = vk_f10 then
       spbsair.Click;
+   if key = vk_insert then
+      spbnovo.Click;
 end;
 
 procedure Tfrmcadcategoria.FormClose(Sender: TObject;
@@ -345,6 +349,19 @@ begin
             exit;
          end;
    end;
+end;
+
+procedure Tfrmcadcategoria.spbnovoClick(Sender: TObject);
+begin
+   lblcategcodestr.Clear;
+   lblcodcategalt.Clear;
+   chkgrupo.Checked := false;
+   grupo := 'N';
+   lblcategnome.Clear;
+   controle := 'INCLUSÃO';
+   statusbar1.Panels[5].Text := controle;
+   lblcodcategalt.Text := geoapolo_configcod(frmprincipal.codigo_empresa, 'USER_geoapolo_categoria', 'S');
+   lblcategcodestr.SetFocus;
 end;
 
 procedure Tfrmcadcategoria.chkgrupoClick(Sender: TObject);
@@ -567,6 +584,8 @@ procedure Tfrmcadcategoria.gridcategoriasKeyUp(Sender: TObject;
 begin
    if key = vk_delete then
       spbexcluir.Click;
+   if key = vk_insert then
+      spbnovo.Click;
 end;
 
 procedure Tfrmcadcategoria.spbexcluirClick(Sender: TObject);

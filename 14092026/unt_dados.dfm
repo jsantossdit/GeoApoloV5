@@ -297,4 +297,29 @@ object modulo_dados: Tmodulo_dados
     Left = 68
     Top = 646
   end
+  object fdbancosavic: TFDConnection
+    ConnectionName = 'fdbancosavic'
+    Params.Strings = (
+      'Password=b2J4earCJuNcM7'
+      'User_Name=rccbrasilsavic'
+      'Server=191.252.53.94'
+      'Database=rccbrasilsavic'
+      'Port=3306'
+      'DriverID=MySQL')
+    FormatOptions.AssignedValues = [fvInlineDataSize]
+    FormatOptions.InlineDataSize = 50
+    LoginPrompt = False
+    Left = 20
+    Top = 720
+  end
+  object fdbancoapp: TFDConnection
+    ConnectionName = 'fdbancoapp'
+    Params.Strings = (
+      'DriverID=MySQL')
+    FormatOptions.AssignedValues = [fvInlineDataSize]
+    FormatOptions.InlineDataSize = 50
+    LoginPrompt = False
+    Left = 68
+    Top = 720
+  end
 end

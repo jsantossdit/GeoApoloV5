@@ -1,0 +1,3 @@
+No formulário de entidades, o botão limpar na tela de fusca não está funcionando, quando faço buscas pelo cpf 87454033504, ele consta da base mas não está funcionando,
+não sei se está usando a view entidades_geoapolo, mas precisava dar uma olhada, na combo de pesquisa também trocar o termo cod Alvo por entcod que é um linguajar mais
+simples aos usuários, no grid das entidades, colocar uma scrool bar vertical e listar todos os campos disponíveis na view.

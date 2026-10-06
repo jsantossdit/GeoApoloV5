@@ -18,12 +18,13 @@ class DesligamentoUsuarioView:
         self.parent = parent
         self.service = service or PermissoesService(PermissoesRepository())
 
+        from core import centralizar_janela
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Desativação / Desligamento de Usuários")
-        self.window.geometry("860x600")
         self.window.minsize(780, 520)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 860, 600)
 
         self._setup_ui()
         self._pesquisar()

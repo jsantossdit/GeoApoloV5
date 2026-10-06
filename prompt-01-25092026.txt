@@ -1,0 +1,37 @@
+1 - no menu principal, trocar o nome do menu Geoapolo para GeoAlvo
+2 - no menu geoapolo integração Savic X Alvo, na opção Importar Grupos de Oração do Savic, criar dois campos com botão pesquisa para consultar as 
+categorias do geoapolo para assim no primeiro campo, pesquiso e disponibilizo a categoria de grupos de oração e no segundo campo que chamaremos de 
+categoria coordenadores de grupo, faremos a seleção da categoria para os grupos de oração.
+3 - no menu geoapolo integração Savic X Alvo, na opção Importar Grupos de Oração do Savic, alterar o botão importar/atualizar para também exercer
+a função de integrador direto no cadastro de entidades do geoapolo, abaixo tentarei fazer uma descrição correta do que grava onde no que se 
+referir ao grupo de oração
+
+Observação: o salvamento na tabela de user_geoapolo_gruposdeoracao e user_geoapolocoordenadores continua sem alteração, vamos acrescentar abaixo
+para inserir no cadastro de entidades do geoalvo
+1 - para grupos de oração segue: 
+1.1 - código g.o.  - como não temos um campo específico no geoapolo, este será o código da entidade a salvar
+1.2 - grupo de oração - salvar no entnome
+1.3 - local de reunião - salvar no entnomefant
+1.4 - tipo de local - gravar em geolocalreferencia_ender
+1.5 - situacao - gravar em geoentendercomp
+1.6 - dia semana - gravar em geoobservacoes 
+	obs para o campo geoobservacoes: modificar a regra atual que basta ter algum conteúdo lá que ele barra a exportação para o alvo, adotar o 
+									 seguinte padrão, para pendências escreveremos [PENDÊNCIAS] se encontrar essa palavra no campo a exportação
+									 para o alvo deverá ser interrompida, contudo quando encontrar [INFORMAÇÕES] nada deve acontecer, a não ser
+									 manter o registro inalterado
+1.7 - caracteristica_grupo - salvar também em geoobservacoes, abaixo da tag [INFORMAÇÕES] com o cabeçalho: Caracteristicas do Grupo:
+1.8 - datainclusao_go - deverá salvar em geoentdatacad
+1.9 - dataatualizacao_go - deverá salvar em geoobservacoes abaixo da tag [INFORMAÇÕES] com o cabeçalho: Última Atualização do G.O.:
+2.0 - codigoapolo - será o código da entidade quando este for enviado, se já tiver atualizar na tabela user_geoapolo_entidades o campo entcod
+2.1 - flagexportado - se o registro tiver sido salvo na user_geoapolo_entidades, deve ser marcado como Sim, do contrário Não
+2.2 - go_geocidcod - vai para o geocidcod da tabela  user_geoapolo_entidades, caso não encontre, deve fazer uma busca em user_geoapolo_cidades, 
+					se não encontrar mesmo assim, salvar na pasta do GeoAlvo.exe um arquivo com o nome (inconsistencias_integ_entidades) e não
+					salvar em entidades.
+2.3 - cadastroid_coordenador - para este caso, deve pegar o conteúdo deste campo, pesquisar em [dbo].[USER_geoapolo_coordenadores_grupodeoracao]
+						pelo id, copiar o campo [cpfcoordenador] copiar o conteúdo na memória, retirar toda a formatação dele e fazer uma pesquisa
+						em user_geoapolo_entidades_documentos com o campo geotipodocumento = 'CPFCNPJ' e colar o número do cpf para pesquisar no
+						no campo geonumerodocumento, encontrando salva o geoentcod em uma variável para depois preencher a tabela 
+						user_geoapolo_entidade_contato que também terá entcod (numero de entidade no alvo se tiver) entcodcontato que deve ser 
+						atualizado conforme as regras dde funcionamento, trazendo do cadastro de entidades  o cpf, o tipotratcod (o mesmo da versão 
+						no windows 8
+2.4 - analisar as tabelas e checar se esqueci algo e nesse caso se tiver sugestões por favor me avise.						

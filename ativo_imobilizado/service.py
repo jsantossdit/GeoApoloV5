@@ -5,7 +5,7 @@ Implementa cálculos de depreciação (Linha Reta) e validações cadastrais.
 
 import logging
 from datetime import datetime, date
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Tuple
 from ativo_imobilizado.models import (
     AtivoImobilizadoDTO,
     CalculoDepreciacaoDTO,
@@ -162,6 +162,28 @@ class AtivoImobilizadoService:
             dados["data_ultima_revisao"] = parsed_rev.strftime("%Y-%m-%d")
 
         try:
+            qtd = float(dados.get("quantidade") or 1.0)
+            if qtd <= 0:
+                qtd = 1.0
+        except (ValueError, TypeError):
+            qtd = 1.0
+        dados["quantidade"] = qtd
+
+        try:
+            val_compra = float(dados.get("valor_compra") or 0.0)
+        except (ValueError, TypeError):
+            val_compra = 0.0
+        dados["valor_compra"] = val_compra
+
+        try:
+            val_total = float(dados.get("valor_total") or 0.0)
+            if val_total <= 0 and val_compra > 0:
+                val_total = round(qtd * val_compra, 2)
+        except (ValueError, TypeError):
+            val_total = round(qtd * val_compra, 2)
+        dados["valor_total"] = val_total
+
+        try:
             if modo_inclusao:
                 self._repo.inserir_bem(dados)
                 return ResultadoOperacaoAtivo(True, "Bem de ativo imobilizado incluído com sucesso!", dados.get("numero_do_bem"))
@@ -228,8 +250,72 @@ class AtivoImobilizadoService:
     def obter_marcas(self) -> List[Dict[str, str]]:
         return self._repo.listar_marcas()
 
+    def obter_ou_criar_marca(self, descricao: str) -> Tuple[int, str, bool]:
+        """Obtém ou cria uma nova marca no catálogo utilizando o repositório integrado."""
+        return self._repo.obter_ou_criar_marca(descricao)
+
     def obter_status(self) -> List[Dict[str, str]]:
         return self._repo.listar_status()
 
     def obter_empresas(self) -> List[Dict[str, str]]:
         return self._repo.listar_empresas()
+
+    # ── Gestão de Classificação de Bens ─────────────────────────────────
+
+    def obter_proximo_codigo_classificacao(self) -> int:
+        return self._repo.obter_proximo_codigo_classificacao()
+
+    def salvar_classificacao(
+        self,
+        codigo: Any,
+        descricao: str,
+        codigo_categoria: Optional[Any] = None,
+    ) -> ResultadoOperacaoAtivo:
+        """Valida e persiste o cadastro de uma classificação patrimonial."""
+        try:
+            cod_int = int(str(codigo).strip())
+            if cod_int <= 0:
+                return ResultadoOperacaoAtivo(False, "Código da classificação deve ser um número positivo.")
+        except (ValueError, TypeError):
+            return ResultadoOperacaoAtivo(False, "Código da classificação inválido.")
+
+        descr_limpa = str(descricao or "").strip().upper()
+        if not descr_limpa:
+            return ResultadoOperacaoAtivo(False, "A descrição da classificação é obrigatória.")
+
+        cod_cat_int = None
+        if codigo_categoria not in (None, "", 0, "0"):
+            try:
+                cod_cat_int = int(str(codigo_categoria).strip())
+            except (ValueError, TypeError):
+                cod_cat_int = None
+
+        try:
+            self._repo.salvar_classificacao(cod_int, descr_limpa, cod_cat_int)
+            return ResultadoOperacaoAtivo(True, "Classificação de bem salva com sucesso!", str(cod_int))
+        except Exception as exc:
+            logger.exception("Erro ao salvar classificação: %s", exc)
+            return ResultadoOperacaoAtivo(False, f"Erro ao salvar classificação no banco:\n{exc}", str(cod_int))
+
+    def excluir_classificacao(self, codigo: Any) -> ResultadoOperacaoAtivo:
+        """Exclui uma classificação existente."""
+        if not codigo:
+            return ResultadoOperacaoAtivo(False, "Código da classificação não informado.")
+        try:
+            cod_int = int(str(codigo).strip())
+            self._repo.excluir_classificacao(cod_int)
+            return ResultadoOperacaoAtivo(True, f"Classificação {cod_int} excluída com sucesso!", str(cod_int))
+        except Exception as exc:
+            logger.exception("Erro ao excluir classificação: %s", exc)
+            return ResultadoOperacaoAtivo(False, f"Erro ao excluir classificação:\n{exc}", str(codigo))
+
+    def obter_classificacao(self, codigo: Any) -> Optional[Dict[str, Any]]:
+        try:
+            cod_int = int(str(codigo).strip())
+            return self._repo.obter_classificacao(cod_int)
+        except Exception:
+            return None
+
+    def listar_todas_classificacoes(self, busca: str = "") -> List[Dict[str, Any]]:
+        return self._repo.listar_todas_classificacoes(busca)
+

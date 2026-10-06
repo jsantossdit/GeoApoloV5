@@ -1,0 +1,8 @@
+2026-09-25 16:17:35 | GOID: GO-200 | GO: G.O. Sao Miguel Arcanjo | Cidade: SAO PAULO - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 16:17:35 | GOID: GO-100 | GO: G.O. Jesus Misericordioso | Cidade: CAMPINAS - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 16:18:11 | GOID: GO-200 | GO: G.O. Sao Miguel Arcanjo | Cidade: SAO PAULO - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 16:18:11 | GOID: GO-100 | GO: G.O. Jesus Misericordioso | Cidade: CAMPINAS - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 16:19:24 | GOID: GO-200 | GO: G.O. Sao Miguel Arcanjo | Cidade: SAO PAULO - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 16:19:24 | GOID: GO-100 | GO: G.O. Jesus Misericordioso | Cidade: CAMPINAS - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 18:13:49 | GOID: GO-200 | GO: G.O. Sao Miguel Arcanjo | Cidade: SAO PAULO - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade
+2026-09-25 18:13:49 | GOID: GO-100 | GO: G.O. Jesus Misericordioso | Cidade: CAMPINAS - SP | Motivo: Cidade não encontrada em USER_geoapolo_cidades ou cidade

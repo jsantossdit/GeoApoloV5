@@ -1,0 +1,33 @@
+no formulário de validação de licenças, não está trazendo os usuarios ativos da tabela user_geoapolo_usuarios, assim não consigo pegar a senha quando necessário
+
+no formulário de conciliação débito x crédito do menu principal \ alvo \ contabilidade, o campo com o código da conta não abre botão de pesquisa para buscar uma
+conta dentro das tabelas do alvo (plano_cta) por empresa, filtrar de acordo com o empcod do sistema e o planoctaempcod do banco de dados alvo.
+
+em relatórios, quando seleciono entidades já exportadas para o alvo e mando executar, está dando um erro de sql, precisamos checar.
+
+no formulário de novas requisições de materiais, temos duas vezes botões aparecendo como tecla pra fechar o ESC, podemos deixar apenas um botão que melhor se 
+adeque a estética do formulário, criar também um campo que classifique o que se está cadastrando, exemplo, Tipo Produto/Serviço (Produto/Serviço) para assim
+podermos diferenciar os pedidos feitos diretamente pelos usuários.
+
+no formulário de movimentação de estoque, ao chamar o atendimento de requisições, no caso de serviços/produtos, ter o campo para diferenciar o que é um do outro, 
+cada movimentação de serviço será de saída e deve gerar um contas a pagar que posteriormente iremos refinar.
+
+nos formulários onde tiver a natureza de operação, no combo que pesquisa a classe, ele não está sabendo se permite digitar o texto que se deseja e ele já vai fazendo 
+a filtragem, pois era assim, 
+
+no módulo de consultas imediatas, disponibilizar também a rotina para exportação em pdf dos dados listados. na combo de pesquisar o nome da consulta, permitir
+que ao digitar o nome ele vá buscando e filtrando os itens ali listados.
+
+analisar e resolver o item abaixo: DATA/HORA: 2026-09-29 12:12:00
+MÓDULO / OPERAÇÃO: Moderação SAVIC - Erros em Lote na Exportação
+CONTEXTO: Erro ao exportar Coordenador JÚLIO DIAS DE LIMA (ID 36043): ('23000', '[23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The INSERT statement conflicted with the FOREIGN KEY constraint "fk_geoentadicionais_geolograd". The conflict occurred in database "RCC", table "dbo.USER_geoapolo_tipologradouro", column \'tipologradabrev\'. (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+Erro ao exportar Coordenador MARLENE VILELA MAGALHÃES ORLANDETI GONÇALVES (ID 7568): ('23000', '[23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The INSERT statement conflicted with the FOREIGN KEY constraint "fk_geoentadicionais_geolograd". The conflict occurred in database "RCC", table "dbo.USER_geoapolo_tipologradouro", column \'tipologradabrev\'. (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+Erro ao exportar Grupo GRUPO DE ORAÇÃO E MISSÃO DEUS NOSSO AUTOR (Cód 5660): ('23000', '[23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The INSERT statement conflicted with the FOREIGN KEY constraint "fk_geoentadicionais_geolograd". The conflict occurred in database "RCC", table "dbo.USER_geoapolo_tipologradouro", column \'tipologradabrev\'. (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+Erro ao exportar Grupo SANTA TERESINHA (Cód 11763): ('23000', '[23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The INSERT statement conflicted with the FOREIGN KEY constraint "fk_geoentadicionais_geolograd". The conflict occurred in database "RCC", table "dbo.USER_geoapolo_tipologradouro", column \'tipologradabrev\'. (547) (SQLExecDirectW); [23000] [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]The statement has been terminated. (3621)')
+TIPO DO ERRO: RuntimeError
+MENSAGEM: 4 erro(s) encontrados durante o processamento em lote.
+STACK TRACE:
+RuntimeError: 4 erro(s) encontrados durante o processamento em lote.
+
+
+ao final após os testes, atualizar o executável

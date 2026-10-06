@@ -159,8 +159,18 @@ class EmpresasView(ttk.Frame):
             return
 
         cod = self.tree_selecao.item(sel[0], "values")[0]
+        nome = self.tree_selecao.item(sel[0], "values")[1] if len(self.tree_selecao.item(sel[0], "values")) > 1 else ""
         res = self.service.selecionar_empresa_ativa(cod)
         if res.sucesso:
+            try:
+                from geoalvo import definir_empresa_ativa
+                top = self.winfo_toplevel()
+                master = getattr(top, "master", None)
+                for w in (master, top):
+                    if w and hasattr(w, "empresa_ativa"):
+                        definir_empresa_ativa(w, cod, nome)
+            except Exception:
+                pass
             messagebox.showinfo("Empresa Ativa", res.mensagem)
             self.carregar_empresas()
         else:

@@ -1,0 +1,10 @@
+no formulário de manutenção de centro de controle, aumentar lateralmente a direita para caber o botão do excluir.
+
+no formulário de movimentação de estoque, ao clicar no botão para saida direta pelo estoque, quando teclo f4 para buscar o produto para lançamento, não está
+trazendo nada no grid assim não permitindo a seleção correta, se digitar o código do produto e o mesmo for encontrado na base, trazer a descrição do mesmo 
+após o botão f4 de buscar, no mesmo formulário, ao clicar no botão lotes (f4) para buscar o lote do produto, precisamos do duplo click para selecionar o lote, 
+trazendo ele ou se teclar f3 para que ele retorne ao formulário que chamou, no mesmo formulário, quando chama a busca do produto, aumentar o formulário lateralmente
+para que o botão azul selecionar ou (enter) possa ser visto e acionado
+
+no menu cadastro \ produtos, ao clicar para entrar na tela de cadastro de produtos, está apresentando erro do campo tamanho que foi alterado para unidademedida,
+precisamos fazer a correção no local

@@ -24,6 +24,8 @@ try:
     from entidades.service import EntidadeService
     from entidades.api_client import AlvoAPIClient
     from entidades.view import EntidadesView
+    from entidades.cadentidade_view import FrmCadEntidade, CadEntidadeView
+    from entidades.database import obter_conexao_banco, obter_conexao_savic
 except (ImportError, ModuleNotFoundError):
     from .models import (
         EntidadeFiltro,
@@ -37,6 +39,8 @@ except (ImportError, ModuleNotFoundError):
     from .service import EntidadeService
     from .api_client import AlvoAPIClient
     from .view import EntidadesView
+    from .cadentidade_view import FrmCadEntidade, CadEntidadeView
+    from .database import obter_conexao_banco, obter_conexao_savic
 
 __all__ = [
     "EntidadeFiltro",
@@ -49,4 +53,8 @@ __all__ = [
     "EntidadeService",
     "AlvoAPIClient",
     "EntidadesView",
+    "FrmCadEntidade",
+    "CadEntidadeView",
+    "obter_conexao_banco",
+    "obter_conexao_savic",
 ]

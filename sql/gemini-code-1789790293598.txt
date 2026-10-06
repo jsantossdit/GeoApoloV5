@@ -1,0 +1,34 @@
+procedure TFormBaixaRequisicao.BtnAtenderClick(Sender: TObject);
+var
+  QtdAtender: Double;
+begin
+  // Lê a quantidade que o usuário informou (valide se é maior que zero)
+  QtdAtender := StrToFloatDef(EdtQuantidadeAtender.Text, 0);
+  
+  if QtdAtender <= 0 then
+  begin
+    ShowMessage('Informe uma quantidade válida para baixa.');
+    Exit;
+  end;
+
+  // Configura a execução da Stored Procedure
+  spAtenderItem.StoredProcName := 'sp_user_geoapolo_atender_req_item';
+  spAtenderItem.Prepare;
+  
+  // Passa os parâmetros baseados no item selecionado na Grid
+  spAtenderItem.ParamByName('@reqitemcod').AsLargeInt := qryItensRequisicao.FieldByName('reqitemcod').AsLargeInt;
+  spAtenderItem.ParamByName('@qtd_atender').AsFloat   := QtdAtender;
+  spAtenderItem.ParamByName('@observacao').AsString   := 'Entregue por ' + SessaoUsuario.Nome;
+
+  try
+    spAtenderItem.ExecProc;
+    ShowMessage('Baixa realizada com sucesso! O estoque foi atualizado.');
+    
+    // Atualiza as Grids para refletir o novo saldo e o novo status da requisição
+    qryRequisicoesCab.Refresh;
+    qryItensRequisicao.Refresh;
+  except
+    on E: Exception do
+      ShowMessage('Erro ao realizar a baixa: ' + E.Message);
+  end;
+end;

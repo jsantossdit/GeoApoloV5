@@ -1,0 +1,3 @@
+no cadastro de entidades, na hora de exportar entidades que sejam grupo de oração (pessoa física), caso o campo de cpf esteja vazio, utilizar a lista que está no 
+arquivo texto cpfs_teste_200.csv para alimentar o campo, assim que o fizer e a exportação for concluída, apagar a linha do cpf utilizado, o mesmo deve ser feito
+quando for pessoa jurídica e ai o arquivo chama-se cnpjs_teste_200.csv, ao utilizar um item, tirar ele da lista. 

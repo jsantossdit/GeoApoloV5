@@ -408,13 +408,15 @@ object frmabout: Tfrmabout
             Style = csDropDownList
             Sorted = True
             TabOrder = 0
+            OnDropDown = cbousuarioDropDown
+            OnEnter = cbousuarioEnter
           end
           object btnexecuta: TBitBtn
             Left = 193
             Top = 40
             Width = 84
             Height = 25
-            Caption = '&Executar'
+            Caption = '&Decriptar'
             Glyph.Data = {
               EE000000424DEE0000000000000076000000280000000E0000000F0000000100
               04000000000078000000130B0000130B00001000000000000000000000000000
@@ -432,9 +434,9 @@ object frmabout: Tfrmabout
             Top = 88
             Width = 263
             Height = 23
-            EditLabel.Width = 47
+            EditLabel.Width = 120
             EditLabel.Height = 17
-            EditLabel.Caption = 'lblsenha'
+            EditLabel.Caption = 'Senha Decodificada:'
             TabOrder = 2
             Text = ''
           end

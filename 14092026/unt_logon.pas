@@ -39,7 +39,8 @@ type
     procedure lblsenhaEnter(Sender: TObject);
   private
     FController     : ILogonController;
-    FConexao        : TFDConnection;   // gerenciada pelo modulo_dados
+    FConexao        : TFDConnection;
+    FTentativasUsuario: Integer;   // gerenciada pelo modulo_dados
     { Inicializacao do controller com todas as dependencias }
     procedure InicializarController;
     { Interpretacao dos eventos retornados pelo controller }
@@ -82,6 +83,7 @@ uses
 { ---------------------------------------------------------------------------- }
 procedure Tfrmlogon.FormCreate(Sender: TObject);
 begin
+  FTentativasUsuario := 0;
   // controller sera criado em FormActivate, apos modulo_dados estar disponivel
 end;
 
@@ -121,8 +123,14 @@ begin
     frmprincipal.usuariobancosql  := DadosBanco.Usuario;
     frmprincipal.senhasql         := DadosBanco.Senha;
     frmprincipal.protocolo        := DadosBanco.Protocolo;
+
+    // Estabelece a conexao agora que os parametros foram carregados
+    conecta_banco('FDALVO');
   end;
-  AtualizarStatus('Pronto.');
+  if Assigned(modulo_dados) and Assigned(modulo_dados.fdbanco) and modulo_dados.fdbanco.Connected then
+    AtualizarStatus('Pronto.')
+  else
+    AtualizarStatus('Banco de dados desconectado.');
   lblusuario.SetFocus;
 end;
 
@@ -173,24 +181,43 @@ begin
     lblusuario.SetFocus;
     Exit;
   end;
-  { Executa logon }
-  if FController.ExecutarLogon(Cred, Evento, Resultado) then
+
+  { Garante conexao ativa antes de autenticar }
+  if not Assigned(modulo_dados) or not Assigned(modulo_dados.fdbanco) or not modulo_dados.fdbanco.Connected then
   begin
-    { Propaga dados do usuario para uso externo }
-    CodigoUsuario       := Resultado.DadosUsuario.CodUsuario;
-    LoginApolo          := Resultado.DadosUsuario.CodApoloLink;
-    NomeUsuario         := Resultado.DadosUsuario.Login;
-    NomeCompletoUsuario := Resultado.DadosUsuario.NomeCompleto;
-    { Propaga para frmprincipal (compatibilidade) }
-    frmprincipal.usucod_apolo := Resultado.DadosUsuario.CodApoloLink;
-    frmprincipal.senha_alvo   := Resultado.DadosUsuario.SenhaAlvo;
-    { Se o usuario alvo (usucod_apolo) ainda nao estiver configurado, solicita agora }
-    if Trim(Resultado.DadosUsuario.CodApoloLink) = '' then
-      SolicitarDadosAlvo(Resultado.DadosUsuario.Login);
-    TratarEventoLogon(elLogonSucesso, Resultado, '');
-  end
-  else
-    TratarEventoLogon(Evento, Resultado, Resultado.MensagemErro);
+    AtualizarStatus('Conectando ao banco de dados...');
+    if not conecta_banco('FDALVO') then
+    begin
+      AtualizarStatus('Banco de dados desconectado.');
+      Exit;
+    end;
+  end;
+
+  { Executa logon }
+  try
+    if FController.ExecutarLogon(Cred, Evento, Resultado) then
+    begin
+      { Propaga dados do usuario para uso externo }
+      CodigoUsuario       := Resultado.DadosUsuario.CodUsuario;
+      LoginApolo          := Resultado.DadosUsuario.CodApoloLink;
+      NomeUsuario         := Resultado.DadosUsuario.Login;
+      NomeCompletoUsuario := Resultado.DadosUsuario.NomeCompleto;
+      { Propaga para frmprincipal (compatibilidade) }
+      frmprincipal.usucod_apolo := Resultado.DadosUsuario.CodApoloLink;
+      frmprincipal.senha_alvo   := Resultado.DadosUsuario.SenhaAlvo;
+      { Se o usuario alvo (usucod_apolo) ainda nao estiver configurado, solicita agora }
+      if Trim(Resultado.DadosUsuario.CodApoloLink) = '' then
+        SolicitarDadosAlvo(Resultado.DadosUsuario.Login);
+      TratarEventoLogon(elLogonSucesso, Resultado, '');
+    end
+    else
+      TratarEventoLogon(Evento, Resultado, Resultado.MensagemErro);
+  except
+    on E: Exception do
+    begin
+      TratarFalhaConexaoGeral(E.Message, frmprincipal.nomeserversql, frmprincipal.nomebancosql);
+    end;
+  end;
   AtualizarStatus('');
 end;
 
@@ -212,8 +239,32 @@ end;
 procedure Tfrmlogon.lblusuarioKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
-  if (Key = VK_TAB) or (Key = VK_RETURN) then
-    lblsenha.SetFocus;
+  if Key = VK_RETURN then
+  begin
+    Key := 0;
+    if (Trim(lblusuario.Text) <> '') and Assigned(FController) and
+       FController.UsuarioExiste(Trim(lblusuario.Text)) then
+    begin
+      FTentativasUsuario := 0;
+      lblsenha.SetFocus;
+    end
+    else
+    begin
+      Inc(FTentativasUsuario);
+      if FTentativasUsuario >= 3 then
+      begin
+        MessageDlg('Usuário não cadastrado.' + #13#10 +
+          'Número máximo de tentativas excedido (3 tentativas).' + #13#10 +
+          'A execução do sistema será encerrada.', mtError, [mbOK], 0);
+        Application.Terminate;
+        Exit;
+      end;
+      MessageDlg('Usuário não cadastrado.' + #13#10 +
+        'Tentativa ' + IntToStr(FTentativasUsuario) + ' de 3.', mtError, [mbOK], 0);
+      lblusuario.SelectAll;
+      lblusuario.SetFocus;
+    end;
+  end;
 end;
 procedure Tfrmlogon.lblsenhaKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
@@ -255,7 +306,7 @@ begin
      modulo_dados.fdbanco := TFDConnection.Create(nil); // ou Self, dependendo do escopo
 
    if not Assigned(modulo_dados.fdbanco) then
-      raise Exception.Create('Conex�o n�o inicializada.');
+      raise Exception.Create('Conex�o n�o inicializada.');
 
 FConexao := modulo_dados.fdbanco;
 

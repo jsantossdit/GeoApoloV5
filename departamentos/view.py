@@ -238,10 +238,11 @@ class DepartamentosView(ttk.Frame):
 
 def abrir_janela_departamentos(parent, connection=None):
     """Abre a tela de Departamentos em janela TopLevel."""
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
     win.title("Gestão de Departamentos & Seções - GeoAlvo")
-    win.geometry("860x500")
     win.minsize(700, 380)
+    centralizar_janela(win, parent, 860, 500)
     view = DepartamentosView(win, connection=connection)
     view.pack(fill=tk.BOTH, expand=True)
     return win

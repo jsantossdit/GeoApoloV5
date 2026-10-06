@@ -173,6 +173,8 @@ function preenche_vetor:string ; export;
 function GetLocalIP : string; export;
 function LogUser : String; export;
 function NomeComputador : String; export;
+function SanitizarNomeServidor(const AServidor: string): string; export;
+function ServidorEhLocal(const AServidor: string): Boolean; export;
 function UserName : String; export;
 // function carrega_campo_dinamico(query : TADOQuery ) : string; overload; export; -- desativada em 08/06/2026
 function carrega_campo_dinamico(query : TFDQuery ) : string; overload; export;
@@ -202,7 +204,7 @@ function DifHora(Inicio,Fim : String):String; export;
 function limpahtml(RichEdit: TRichEdit; html:string) : string;
 function RemoveTags(const s: string): string; export;
 function FormEstaCriado(AClass: TClass): Boolean; overload; export;
-//function integraapolo : string; export;
+function integraapolo : string; export;
 function EnviarEmail2(Dominio, Porta, Usuario, Senha, DeNome, DeEmail,Para, Assunto, Corpo: string; CorpoMIME, AnexoMIME: integer; AutoResposta: Boolean): Boolean; export;
 function carrega_mail_config : string; export;
 Function ValidaEMail(const EMailIn: string):Boolean; export;
@@ -1866,61 +1868,19 @@ begin
 end;
 
 function tiracento ( str: String ): String;
+const
+  ComAcento: string = 'àáâãäèéêëìíîïòóôõöùúûüçÀÁÂÃÄÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÇñÑ';
+  SemAcento: string = 'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUCNN';
 var
-   i: Integer;
+  i, p: Integer;
 begin
-   for i := 1 to Length ( str ) do
-      case str[i] of
-      'á': str[i] := 'a';
-      'é': str[i] := 'e';
-      'í': str[i] := 'i';
-      'ó': str[i] := 'o';
-      'ú': str[i] := 'u';
-      'à': str[i] := 'a';
-      'è': str[i] := 'e';
-      'ì': str[i] := 'i';
-      'ò': str[i] := 'o';
-      'ù': str[i] := 'u';
-      'â': str[i] := 'a';
-      'ê': str[i] := 'e';
-      'î': str[i] := 'i';
-      'ô': str[i] := 'o';
-      'û': str[i] := 'u';
-      'ä': str[i] := 'a';
-      'ë': str[i] := 'e';
-      'ï': str[i] := 'i';
-      'ö': str[i] := 'o';
-      'ü': str[i] := 'u';
-      'ã': str[i] := 'a';
-      'õ': str[i] := 'o';
-      'ñ': str[i] := 'n';
-      'ç': str[i] := 'c';
-      'Á': str[i] := 'A';
-      'É': str[i] := 'E';
-      'Í': str[i] := 'I';
-      'Ó': str[i] := 'O';
-      'Ú': str[i] := 'U';
-      'À': str[i] := 'A';
-      'È': str[i] := 'E';
-      'Ì': str[i] := 'I';
-      'Ò': str[i] := 'O';
-      'Ù': str[i] := 'U';
-      'Â': str[i] := 'A';
-      'Ê': str[i] := 'E';
-      'Î': str[i] := 'I';
-      'Ô': str[i] := 'O';
-      'Û': str[i] := 'U';
-      'Ä': str[i] := 'A';
-      'Ë': str[i] := 'E';
-      'Ï': str[i] := 'I';
-      'Ö': str[i] := 'O';
-      'Ü': str[i] := 'U';
-      'Ã': str[i] := 'A';
-      'Õ': str[i] := 'O';
-      'Ñ': str[i] := 'N';
-      'Ç': str[i] := 'C';
-      end;
-   Result := str;
+  for i := 1 to Length(str) do
+  begin
+    p := Pos(str[i], ComAcento);
+    if p > 0 then
+      str[i] := SemAcento[p];
+  end;
+  Result := str;
 end;
 
 function fRemoveFormatoCarEsp(Texto: string): string;
@@ -2627,6 +2587,44 @@ begin
   GetComputerName(lpBuffer,nSize);
   Result := String(lpBuffer);
   StrDispose(lpBuffer);
+end;
+
+function SanitizarNomeServidor(const AServidor: string): string;
+var
+  S: string;
+begin
+  S := Trim(AServidor);
+  while (Length(S) > 0) and ((S[1] = '\') or (S[1] = '/')) do
+    Delete(S, 1, 1);
+  S := StringReplace(S, '/', '\', [rfReplaceAll]);
+  while Pos('\\', S) > 0 do
+    S := StringReplace(S, '\\', '\', [rfReplaceAll]);
+  Result := Trim(S);
+end;
+
+function ServidorEhLocal(const AServidor: string): Boolean;
+var
+  S, Srv, HostLocal: string;
+  P: Integer;
+begin
+  S := UpperCase(SanitizarNomeServidor(AServidor));
+  if S = '' then Exit(False);
+  P := Pos('\', S);
+  if P > 0 then
+    Srv := Copy(S, 1, P - 1)
+  else
+    Srv := S;
+  P := Pos(',', Srv);
+  if P > 0 then
+    Srv := Copy(Srv, 1, P - 1);
+
+  HostLocal := UpperCase(Trim(NomeComputador));
+
+  Result := (Srv = 'LOCALHOST') or
+            (Srv = '127.0.0.1') or
+            (Srv = '.') or
+            (Srv = '(LOCAL)') or
+            (Srv = HostLocal);
 end;
 
 function LogUser : String;

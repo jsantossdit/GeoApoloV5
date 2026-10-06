@@ -18,12 +18,13 @@ class CorrecaoCidadesDistritosView:
         self.parent = parent
         self.service = service or LocalidadesService(LocalidadesRepository())
 
+        from core import centralizar_janela
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Correção de Distritos Cadastrados como Cidades")
-        self.window.geometry("1040x680")
         self.window.minsize(900, 580)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 1040, 680)
 
         self._cidades_atuais: List[CidadeDistritoDTO] = []
         self._setup_ui()

@@ -4,7 +4,7 @@ from PIL import Image, ImageTk
 from config_banco import DatabaseConfigForm
 import os
 import sys
-from core import obter_caminho_recurso
+from core import obter_caminho_recurso, centralizar_janela
 
 
 class ToolbarManager:
@@ -13,38 +13,83 @@ class ToolbarManager:
     def __init__(self, parent):
         self.parent = parent
         self.buttons = {}
+        self.items = []
         self.icons = []
         self.create_toolbar()
     
+    def _fechar_dashboard_se_aberto(self):
+        """Fecha o dashboard e limpa memória se estiver ativo no frame principal"""
+        try:
+            from geoalvo import fechar_dashboard_se_aberto
+            fechar_dashboard_se_aberto(self.parent)
+        except Exception:
+            pass
+
     def abrir_config_bancob(self):
         """Abre o formulário de configuração do banco de dados"""
         try:
-            config_form = DatabaseConfigForm()
-            # config_form.root.transient(root)
-            config_form.root.transient(self.parent)
-            config_form.root.update_idletasks()
-            width, height = 600, 500
-            x = (config_form.root.winfo_screenwidth() // 2) - (width // 2)
-            y = (config_form.root.winfo_screenheight() // 2) - (height // 2)
-            config_form.root.geometry(f'{width}x{height}+{x}+{y}')
-            config_form.run()
-            
-            # Por enquanto, usando um messagebox como placeholder
-            # messagebox.showinfo("Configuração", "Abrindo configuração do banco de dados...")
-            
+            self._fechar_dashboard_se_aberto()
+            from geoalvo import abrir_config_banco_aba
+            abrir_config_banco_aba(self.parent, "MSSQL")
         except Exception as e:
             print(f"Erro ao abrir configuração do banco: {e}")
-            messagebox.showerror("Erro", f"Erro ao abrir configuração do banco: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir configuração do banco:\n{e}")
 
     def abrir_entidades(self):
         """Abre a janela de gestão de entidades"""
         try:
+            self._fechar_dashboard_se_aberto()
             from entidades import EntidadesView
             EntidadesView(self.parent)
         except Exception as e:
             print(f"Erro ao abrir módulo de entidades: {e}")
             messagebox.showerror("Erro", f"Erro ao abrir módulo de entidades:\n{e}")
-        
+
+    def abrir_consultas_imediatas(self):
+        """Abre a janela de Consultas Imediatas (unt_imediatas do Delphi) com ícone de funil"""
+        try:
+            self._fechar_dashboard_se_aberto()
+            from consultas import abrir_consultas_imediatas
+            abrir_consultas_imediatas(self.parent)
+        except Exception as e:
+            print(f"Erro ao abrir Consultas Imediatas: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir Consultas Imediatas:\n{e}")
+
+    def abrir_concilia_vindi(self):
+        """Abre o formulário de Conciliação Vindi e Crédito Recorrente RCC"""
+        try:
+            self._fechar_dashboard_se_aberto()
+            from vindi import ConciliacaoVindiView
+            ConciliacaoVindiView(self.parent)
+        except Exception as e:
+            print(f"Erro ao abrir Conciliação Vindi: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir Conciliação Vindi:\n{e}")
+
+    def abrir_nova_requisicao(self):
+        """Abre o formulário de Nova Requisição de Materiais"""
+        try:
+            self._fechar_dashboard_se_aberto()
+            from estoque import abrir_nova_requisicao_material
+            abrir_nova_requisicao_material(self.parent)
+        except Exception as e:
+            print(f"Erro ao abrir Nova Requisição de Material: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir Nova Requisição de Material:\n{e}")
+
+    def abrir_usuarios_geoapolo(self):
+        """Abre o formulário de Gestão de Usuários GeoApolo"""
+        try:
+            self._fechar_dashboard_se_aberto()
+            from usuarios import UsuariosView
+            top = tk.Toplevel(self.parent)
+            top.title("Gestão de Usuários, Grupos e Perfis de Acesso - GeoAlvo")
+            top.minsize(800, 500)
+            centralizar_janela(top, self.parent, 960, 620)
+            view = UsuariosView(top)
+            view.pack(fill=tk.BOTH, expand=True)
+        except Exception as e:
+            print(f"Erro ao abrir gestão de usuários: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir gestão de usuários:\n{e}")
+
     def create_toolbar(self):
         """Cria a estrutura da toolbar"""
         # Frame principal da toolbar
@@ -53,24 +98,24 @@ class ToolbarManager:
         
         # Configuração dos botões da toolbar
         self.toolbar_config = [            
-            # Seção: Banco de Dados
-            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configura', 'command': self.abrir_config_bancob, 'tooltip': 'Configurar Acesso ao Banco de dados (Ctrl+B+D)'},
-            {'name': 'entidades', 'icon': 'entidades.png', 'text': 'Entidades', 'command': self.abrir_entidades, 'tooltip': 'Cadastro e Gestão de Entidades'},
+            # Seção: Principal (Configurações, Entidades, Conciliação Vindi, Nova Requisição de Material)
+            {'name': 'config_bd', 'icon': 'database.png', 'text': 'Configurações', 'command': self.abrir_config_bancob, 'tooltip': 'Configurações'},
+            {'name': 'entidades', 'icon': 'entidades.png', 'text': 'Entidades', 'command': self.abrir_entidades, 'tooltip': 'Entidades'},
+            {'name': 'conciliacao_vindi', 'icon': 'cifrao.png', 'text': 'R$', 'command': self.abrir_concilia_vindi, 'tooltip': 'Conciliação Vindi'},
+            {'name': 'nova_requisicao', 'icon': 'requisicao.png', 'text': 'Requisição', 'command': self.abrir_nova_requisicao, 'tooltip': 'Nova Requisição de Material'},
             {'type': 'separator'},
 
-            # Seção: Arquivo
+            # Seção: Arquivo (Troca de Empresa)
             {'name': 'troca_empresa', 'icon': 'company.png', 'text': 'Troca Empresa', 'command': self.change_company, 'tooltip': 'Troca de empresa no sistema'},
-            {'name': 'salvar', 'icon': 'save.png', 'text': 'Salvar', 'command': self.salvar_arquivo, 'tooltip': 'Salvar arquivo (Ctrl+S)'},
             {'type': 'separator'},
             
-            # Seção: Relatórios
-            {'name': 'relatorio', 'icon': 'report.png', 'text': 'Relatório', 'command': self.gerar_relatorio, 'tooltip': 'Gerar relatório'},
+            # Seção: Usuários GeoApolo
+            {'name': 'usuarios', 'icon': 'users.png', 'text': 'Usuários', 'command': self.abrir_usuarios_geoapolo, 'tooltip': 'Usuários GeoApolo'},
+            {'type': 'separator'},
+
+            # Seção: Impressão e Consultas Imediatas (Imprimir posicionado antes do funil de consultas)
             {'name': 'imprimir', 'icon': 'print.png', 'text': 'Imprimir', 'command': self.imprimir, 'tooltip': 'Imprimir documento (Ctrl+P)'},
-            {'type': 'separator'},
-            
-            # Seção: Sistema
-            {'name': 'usuarios', 'icon': 'users.png', 'text': 'Usuários', 'command': self.gerenciar_usuarios, 'tooltip': 'Gerenciar usuários'},
-            {'name': 'config', 'icon': 'settings.png', 'text': 'Config', 'command': self.configuracoes, 'tooltip': 'Configurações do sistema'},
+            {'name': 'consultas_imediatas', 'icon': 'funil.png', 'text': 'Consultas', 'command': self.abrir_consultas_imediatas, 'tooltip': 'Consultas Imediatas'},
             {'type': 'separator'},
             
             # Seção: Sair
@@ -130,21 +175,23 @@ class ToolbarManager:
         
         btn.pack(side=tk.LEFT, padx=1, pady=2)
         
+        # Efeitos hover
+        btn.bind("<Enter>", lambda e, b=btn: self.on_enter(b), add="+")
+        btn.bind("<Leave>", lambda e, b=btn: self.on_leave(b), add="+")
+
         # Adicionar tooltip
         if tooltip:
             self.create_tooltip(btn, tooltip)
         
-        # Efeitos hover
-        btn.bind("<Enter>", lambda e, b=btn: self.on_enter(b))
-        btn.bind("<Leave>", lambda e, b=btn: self.on_leave(b))
-        
         # Salvar referência
         self.buttons[name] = btn
+        self.items.append({'type': 'button', 'name': name, 'widget': btn})
     
     def add_separator(self):
         """Adiciona um separador vertical"""
         separator = tk.Frame(self.toolbar, width=2, height=30, bg='#d0d0d0', relief=tk.SUNKEN, bd=1)
         separator.pack(side=tk.LEFT, padx=5, pady=5, fill=tk.Y)
+        self.items.append({'type': 'separator', 'widget': separator})
     
     def load_icon(self, filename, size=(24, 24)):
         """Carrega um ícone com tratamento de erro"""
@@ -156,9 +203,7 @@ class ToolbarManager:
                 # Usar PIL para redimensionar
                 image = Image.open(full_path)
                 image = image.resize(size, Image.Resampling.LANCZOS)
-                # return ImageTk.PhotoImage(image)
                 return ImageTk.PhotoImage(image, master=self.parent)
-
             else:
                 # Para arquivos .gif nativos do tkinter
                 return tk.PhotoImage(file=full_path)
@@ -169,29 +214,37 @@ class ToolbarManager:
     def create_tooltip(self, widget, text):
         """Cria tooltip para um widget"""
         def show_tooltip(event):
+            if hasattr(widget, 'tooltip') and widget.tooltip:
+                try:
+                    widget.tooltip.destroy()
+                except Exception:
+                    pass
+
             tooltip = tk.Toplevel()
             tooltip.wm_overrideredirect(True)
             tooltip.configure(bg='#ffffe0', relief='solid', bd=1)
             
             label = tk.Label(tooltip, text=text, bg='#ffffe0', fg='black', 
-                           font=('Arial', 8), padx=4, pady=2)
+                           font=('Segoe UI', 9), padx=6, pady=3)
             label.pack()
             
             x = event.x_root + 10
-            y = event.y_root + 10
+            y = event.y_root + 18
             tooltip.geometry(f"+{x}+{y}")
             
-            # Remove tooltip após 3 segundos
             widget.tooltip = tooltip
-            tooltip.after(3000, tooltip.destroy)
+            tooltip.after(3500, lambda: hide_tooltip(None))
         
-        def hide_tooltip(event):
-            if hasattr(widget, 'tooltip'):
-                widget.tooltip.destroy()
+        def hide_tooltip(event=None):
+            if hasattr(widget, 'tooltip') and widget.tooltip:
+                try:
+                    widget.tooltip.destroy()
+                except Exception:
+                    pass
                 delattr(widget, 'tooltip')
         
-        widget.bind("<Enter>", show_tooltip)
-        widget.bind("<Leave>", hide_tooltip)
+        widget.bind("<Enter>", show_tooltip, add="+")
+        widget.bind("<Leave>", hide_tooltip, add="+")
     
     def on_enter(self, button):
         """Efeito hover - entrada"""
@@ -218,31 +271,85 @@ class ToolbarManager:
         else:
             self.disable_button(name)
     
+    def show_button(self, name):
+        """Exibe um botão específico na toolbar"""
+        if name in self.buttons:
+            self.buttons[name].pack(side=tk.LEFT, padx=1, pady=2)
+
+    def hide_button(self, name):
+        """Oculta um botão específico da toolbar"""
+        if name in self.buttons:
+            self.buttons[name].pack_forget()
+
+    def aplicar_permissoes(self, gestor):
+        """Aplica controle de acesso na barra de ferramentas:
+        - Bloqueia e oculta a barra inteira se pnlmenuprincipal estiver desautorizado.
+        - Para cada botão: se permitido, habilita e exibe; se bloqueado, desabilita e oculta.
+        - Elimina separadores órfãos ou duplicados."""
+        if not gestor:
+            return
+
+        # 1. Verifica bloqueio global da barra de ferramentas (pnlmenuprincipal)
+        if not gestor.pode_acessar("pnlmenuprincipal"):
+            self.toolbar.pack_forget()
+            return
+        else:
+            self.toolbar.pack(side=tk.TOP, fill=tk.X)
+
+        # 2. Desempacota todos os itens para remontar em ordem precisa
+        for item in self.items:
+            try:
+                item['widget'].pack_forget()
+            except Exception:
+                pass
+
+        ultimo_item_foi_botao = False
+        for item in self.items:
+            if item['type'] == 'button':
+                nome_btn = item['name']
+                permitido = gestor.pode_acessar(nome_btn)
+                btn = item['widget']
+                if permitido:
+                    btn.config(state=tk.NORMAL)
+                    btn.pack(side=tk.LEFT, padx=1, pady=2)
+                    ultimo_item_foi_botao = True
+                else:
+                    btn.config(state=tk.DISABLED)
+                    # Não empacota o botão bloqueado -> permanece oculto
+            elif item['type'] == 'separator':
+                # Só exibe o separador se precedido por um botão visível
+                if ultimo_item_foi_botao:
+                    item['widget'].pack(side=tk.LEFT, padx=5, pady=5, fill=tk.Y)
+                    ultimo_item_foi_botao = False
+    
     # ==========================================
     # MÉTODOS DE COMANDO DOS BOTÕES
     # ==========================================
     
-    def novo_arquivo(self):
-        messagebox.showinfo("","Config. BD")
-    
-    def abrir_arquivo(self):
-        messagebox.showinfo("Abrir", "Abrir arquivo")
-    
-    def salvar_arquivo(self):
-        messagebox.showinfo("Salvar", "Salvar arquivo")
-    
-    def config_banco(self):
-        messagebox.showinfo("", "Configurar Banco de Dados")
-    
-    def conectar_banco(self):
-        messagebox.showinfo("Conectar", "Conectar ao banco")
-    
     def change_company(self):
-        messagebox.showinfo("Empresa", "Trocar empresa")
+        """Abre o formulário de seleção de empresas para troca de contexto corporativo."""
+        try:
+            self._fechar_dashboard_se_aberto()
+            from seleciona_empresa import TelaSelecaoEmpresa
+
+            def _on_confirmar(cod, nome):
+                try:
+                    from geoalvo import definir_empresa_ativa
+                    definir_empresa_ativa(self.parent, cod, nome)
+                except Exception as ex:
+                    print(f"Erro ao definir empresa ativa: {ex}")
+                messagebox.showinfo("Troca de Empresa", f"Empresa ativa alterada com sucesso:\n{cod} - {nome}")
+
+            form_empresa = TelaSelecaoEmpresa(self.parent, on_confirmar=_on_confirmar)
+            form_empresa.executar()
+        except Exception as e:
+            print(f"Erro ao abrir seleção de empresa: {e}")
+            messagebox.showerror("Erro", f"Erro ao abrir seleção de empresa:\n{e}")
     
     def gerar_relatorio(self):
         """Abre a Central de Relatórios"""
         try:
+            self._fechar_dashboard_se_aberto()
             from relatorios import RelatoriosView
             RelatoriosView(self.parent)
         except Exception as e:
@@ -253,9 +360,10 @@ class ToolbarManager:
         self.gerar_relatorio()
     
     def gerenciar_usuarios(self):
-        messagebox.showinfo("Usuários", "Gerenciar usuários")
+        self.abrir_usuarios_geoapolo()
     
     def configuracoes(self):
+        self._fechar_dashboard_se_aberto()
         messagebox.showinfo("Configurações", "Configurações do sistema")
     
     def sair_aplicacao(self):

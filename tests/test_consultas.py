@@ -155,6 +155,55 @@ class TestConsultasRepositorySQLite(unittest.TestCase):
         self.assertEqual(res.colunas, ["cidnomecomp", "ufsigla"])
         self.assertEqual(res.linhas[0][0], "LORENA")
 
+    def test_listar_consultas_imediatas_e_por_descricao(self):
+        # Cadastra consulta imediata
+        c = ConsultaConfigDTO(
+            codigo_consulta="CONS_IMED_1",
+            descricao_consulta="Consulta Imediata Teste",
+            sql_consulta="SELECT * FROM user_geoapolo_cidades",
+            tipo_consulta="I",
+            banco_consulta="ALVO"
+        )
+        self.repo.salvar_consulta(c)
+        self.repo.atualizar_permissao_consulta("JULIO", "CONS_IMED_1", "A")
+
+        # Busca por descricao
+        buscada = self.repo.obter_consulta_por_descricao("Consulta Imediata Teste")
+        self.assertIsNotNone(buscada)
+        self.assertEqual(buscada.codigo_consulta, "CONS_IMED_1")
+
+        # Lista imediatas para JULIO
+        imediatas_julio = self.repo.listar_consultas_imediatas("JULIO", "ALVO")
+        self.assertEqual(len(imediatas_julio), 1)
+        self.assertEqual(imediatas_julio[0].codigo_consulta, "CONS_IMED_1")
+
+        # Lista imediatas para ADMIN
+        imediatas_admin = self.repo.listar_consultas_imediatas("ADMIN", "ALVO")
+        self.assertGreaterEqual(len(imediatas_admin), 1)
+
+    def test_aplicar_permissao_usuario_e_remover(self):
+        qtd = self.repo.aplicar_permissao_grupo_ou_usuario("CONS_CIDADES", "A", usucod="TESTE_USER")
+        self.assertEqual(qtd, 1)
+
+        perms = self.repo.listar_permissoes_consulta("CONS_CIDADES")
+        usuarios = [p.usucod for p in perms]
+        self.assertIn("TESTE_USER", usuarios)
+
+        # Remover permissao
+        self.assertTrue(self.repo.remover_permissao_consulta("TESTE_USER", "CONS_CIDADES"))
+        perms_depois = self.repo.listar_permissoes_consulta("CONS_CIDADES")
+        usuarios_depois = [p.usucod for p in perms_depois]
+        self.assertNotIn("TESTE_USER", usuarios_depois)
+
+    def test_clonar_permissoes_consulta(self):
+        self.repo.atualizar_permissao_consulta("USER_ORIGEM", "CONS_CIDADES", "A")
+        clonadas = self.repo.clonar_permissoes_consulta("USER_ORIGEM", "USER_DESTINO")
+        self.assertEqual(clonadas, 1)
+
+        perms = self.repo.listar_permissoes_consulta("CONS_CIDADES")
+        usuarios = [p.usucod for p in perms]
+        self.assertIn("USER_DESTINO", usuarios)
+
 
 class TestConsultasService(unittest.TestCase):
     """Testes de negócio e proteção SQL do ConsultasService."""
@@ -193,26 +242,31 @@ class TestConsultasService(unittest.TestCase):
         self.assertTrue(self.service.salvar_consulta(c_valida))
 
     def test_validar_seguranca_sql_leitura(self):
-        # Validas
+        # Validas (SELECT, WITH, INSERT em temp, DROP temp, CREATE, etc.)
         ok1, _ = self.service.validar_seguranca_sql_leitura("SELECT * FROM user_geoapolo_cidades")
         self.assertTrue(ok1)
 
         ok2, _ = self.service.validar_seguranca_sql_leitura("WITH cte AS (SELECT 1 AS x) SELECT * FROM cte")
         self.assertTrue(ok2)
 
+        ok_insert, _ = self.service.validar_seguranca_sql_leitura("INSERT INTO #temp_dados SELECT 1, 'teste'")
+        self.assertTrue(ok_insert)
+
+        ok_drop_temp, _ = self.service.validar_seguranca_sql_leitura("DROP TABLE #temp_dados")
+        self.assertTrue(ok_drop_temp)
+
         # Inválidas: vazia
         inv_vazia, _ = self.service.validar_seguranca_sql_leitura("")
         self.assertFalse(inv_vazia)
 
-        # Inválidas: comando proibido
-        inv_drop, msg_drop = self.service.validar_seguranca_sql_leitura("DROP TABLE user_geoapolo_usuarios")
-        self.assertFalse(inv_drop)
-
+        # Inválidas: comandos destrutivos (somente DELETE e UPDATE)
         inv_del, msg_del = self.service.validar_seguranca_sql_leitura("SELECT 1; DELETE FROM user_geoapolo_usuarios")
         self.assertFalse(inv_del)
+        self.assertIn("DELETE", msg_del)
 
-        inv_upd, _ = self.service.validar_seguranca_sql_leitura("UPDATE user_geoapolo_grupo SET descricao = 'x'")
+        inv_upd, msg_upd = self.service.validar_seguranca_sql_leitura("UPDATE user_geoapolo_grupo SET descricao = 'x'")
         self.assertFalse(inv_upd)
+        self.assertIn("UPDATE", msg_upd)
 
     def test_exportar_resultado_csv(self):
         import tempfile
@@ -238,6 +292,56 @@ class TestConsultasService(unittest.TestCase):
                 self.assertIn("codigo;nome", content)
                 self.assertIn("01;TESTE 1", content)
                 self.assertIn("02;TESTE 2", content)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def test_analisar_e_substituir_parametros(self):
+        sql_original = "SELECT * FROM t WHERE ano = |Ano^ AND dt >= {Data_Inicio} AND tipo = [01.001] AND obs = &?"
+
+        def mock_input(nome, tipo):
+            if nome == "Ano":
+                return "2026"
+            if nome == "Data_Inicio":
+                return "18/09/2026"
+            return ""
+
+        sql_proc, sucesso = self.service.analisar_e_substituir_parametros(sql_original, callback_input=mock_input)
+        self.assertTrue(sucesso)
+        self.assertIn("ano = '2026'", sql_proc)
+        self.assertIn("dt >= '2026-09-18'", sql_proc)
+        self.assertIn("tipo = '01.001' ", sql_proc)
+        self.assertIn("obs = ''", sql_proc)
+
+    def test_analisar_parametros_cancelamento_usuario(self):
+        sql_original = "SELECT * FROM t WHERE ano = |Ano^"
+
+        def mock_input_cancela(nome, tipo):
+            return None  # Usuário cancelou
+
+        sql_proc, sucesso = self.service.analisar_e_substituir_parametros(sql_original, callback_input=mock_input_cancela)
+        self.assertFalse(sucesso)
+        self.assertEqual(sql_proc, "")
+
+    def test_exportar_resultado_excel_xlsx(self):
+        import tempfile
+        import os
+
+        res = ResultadoConsultaDTO(
+            sucesso=True,
+            colunas=["codigo", "descricao"],
+            linhas=[["1", "CONSULTA 1"], ["2", "CONSULTA 2"]],
+            total_registros=2
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            total = self.service.exportar_resultado_excel(res, tmp_path)
+            self.assertEqual(total, 2)
+            self.assertTrue(os.path.exists(tmp_path))
+            self.assertGreater(os.path.getsize(tmp_path), 0)
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)

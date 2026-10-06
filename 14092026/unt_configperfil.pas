@@ -1,4 +1,4 @@
-﻿unit unt_configperfil;
+unit unt_configperfil;
 {
   MÓDULO: Configuração de Perfil de Acesso
   REFATORADO: Arquitetura em camadas com nomes amigáveis para os objetos
@@ -27,7 +27,7 @@
 interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Buttons, ExtCtrls, ComCtrls, ImgList, Grids,
+  Dialogs, StdCtrls, Buttons, ExtCtrls, ComCtrls, ImgList, Grids, Menus,
   FireDAC.Comp.Client, FireDAC.Stan.Param, System.TypInfo;
 type
   { ------------------------------------------------------------------ }
@@ -50,6 +50,7 @@ type
     { --- Toolbar de ações --- }
     spbsalvar    : TSpeedButton;   // Salvar todas as permissões pendentes
     spblimpar    : TSpeedButton;   // Limpar seleção de grupo
+    spbatualizar : TSpeedButton;   // Atualizar lista com varredura completa
     spbdeletar   : TSpeedButton;   // Remover objeto obsoleto
     spblocalizar : TSpeedButton;   // Localizar objeto na lista
     spbretornar  : TSpeedButton;   // Fechar / Salvar e fechar
@@ -90,6 +91,7 @@ type
     procedure btnRevogarTodosClick(Sender: TObject);
     procedure spbretornarClick(Sender: TObject);
     procedure spblimparClick(Sender: TObject);
+    procedure spbatualizarClick(Sender: TObject);
     procedure spbrenomearClick(Sender: TObject);
     procedure spbsalvarClick(Sender: TObject);
   private
@@ -159,84 +161,157 @@ end;
 { ══════════════════════════════════════════════════════════════════════ }
 procedure Tfrmconfigperfil.SincronizarObjetosBanco;
 {
-  Para cada componente visível em frmprincipal:
-    - Se não existir em USER_geoapolo_objetos → INSERT
-    - Ao inserir, cria entrada em grupobjetos (statusacesso='N') para todos os grupos
-  nome_amigavel começa igual ao nome técnico; o admin pode renomear depois.
+  Faz a varredura completa dos objetos de segurança do sistema:
+    - Lê componentes de frmprincipal (menus e botões da barra)
+    - Se não existir em USER_geoapolo_objetos → INSERT com código gerado
+    - Garante que TODOS os objetos do catálogo tenham registro correspondente
+      em USER_geoapolo_grupobjetos para TODOS os grupos existentes (status 'N').
 }
 var
-                i            : Integer;
-  sNomeTecnico,sNomeAmigavel : string;
+  i                          : Integer;
+  sNomeTecnico, sNomeAmigavel: string;
+  sCategoria                 : string;
   sCodObjeto                 : string;
-  sGrups                     : TFDQuery; // cursor local para iterar grupos
   cmp                        : TComponent;
+  sEmp                       : string;
 begin
   with modulo_dados do
   begin
-    for i := 0 to frmprincipal.ComponentCount - 1 do
+    sEmp := Trim(frmprincipal.codigo_empresa);
+    if sEmp = '' then
+      sEmp := '1';
+
+    // 1) Varredura dinâmica de componentes em frmprincipal
+    if Assigned(frmprincipal) then
     begin
-      sNomeTecnico := frmprincipal.Components[i].GetNamePath;
-      Cmp := frmprincipal.Components[i]; // Facilita a leitura
-      // 1. Define o ClassName como padrão (caso não ache Text ou Caption)
-      sNomeAmigavel := Cmp.ClassName;
-      // 2. Verifica se tem a propriedade Caption (Comum em TMenuItem, TLabel, TButton)
-      if IsPublishedProp(Cmp, 'Caption') then
-        sNomeAmigavel := GetPropValue(Cmp, 'Caption')
-      // 3. Se não tiver Caption, verifica se tem Text (Comum em TEdit, TComboBox)
-      else if IsPublishedProp(Cmp, 'Text') then
-        sNomeAmigavel := GetPropValue(Cmp, 'Text');
-      // Dica Extra: Se for um menu, o Caption geralmente vem com o '&' (ex: '&Arquivo').
-      // A linha abaixo limpa esse caractere para o banco de dados ficar mais limpo.
-      sNomeAmigavel := StringReplace(sNomeAmigavel, '&', '', [rfReplaceAll]);
-      //
-      { Verifica se o objeto já existe }
-      sql:= 'SELECT codigo_objeto FROM USER_geoapolo_objetos WHERE nome_objeto = :psnometecnico';
-      fdquerysql2.Close;
-      fdquerysql2.SQL.Clear;
-      fdquerysql2.SQL.Text := sql;
-      fdquerysql2.ParamByName('psnometecnico').AsString := sNomeTecnico;
-      if not executaracao(fdquerysql2, fdbanco, true, dtsfdquerysql2) then
+      for i := 0 to frmprincipal.ComponentCount - 1 do
       begin
-        { Novo objeto — gera código e insere }
-        sCodObjeto := geoapolo_configcod(frmprincipal.codigo_empresa,'USER_geoapolo_objetos', 'Sim');
-        sql:='INSERT INTO USER_geoapolo_objetos (codigo_objeto, nome_objeto, nome_amigavel, categoria) '  ;
-        sql:=sql+' VALUES (:pcodigobj,:pnomeobjeto,:pnomeamigavel, :pcategoria)';
-        fdquerysql3.Close;
-        fdquerysql3.SQL.Clear;
-        fdquerysql3.SQL.Text := sql;
-        fdquerysql3.ParamByName('pcodigobj').AsString := sCodObjeto;
-        fdquerysql3.ParamByName('pnomeobjeto').AsString:= sNomeTecnico;
-        fdquerysql3.ParamByName('pnomeamigavel').asstring :=sNomeAmigavel; // Passa a variável dinâmica
-        fdquerysql3.ParamByName('pcategoria').AsString := frmprincipal.Components[i].ClassName;
-        if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-           begin
-          { Insere statusacesso='N' para todos os grupos existentes }
-          sql:= 'SELECT codigo_grupo FROM USER_geoapolo_grupo';
-          fdquerysql.Close;
-          fdquerysql.SQL.Clear;
-          fdquerysql.SQL.text := sql;
-          if executaracao(fdquerysql,fdbanco, false, dtsfdquerysql) then
+        cmp := frmprincipal.Components[i];
+        sNomeTecnico := Trim(cmp.Name);
+        if sNomeTecnico = '' then
+          sNomeTecnico := Trim(cmp.GetNamePath);
+
+        // Ignora componentes sem nome ou separadores puros de menu
+        if (sNomeTecnico = '') or
+           ((cmp is TMenuItem) and (SameText(TMenuItem(cmp).Caption, '-') or (TMenuItem(cmp).Name = ''))) then
+          Continue;
+
+        // Apenas componentes pertinentes a segurança/acesso
+        if not ((cmp is TMenuItem) or (cmp is TSpeedButton) or (cmp is TToolButton) or
+                (cmp is TButton) or (cmp is TPanel) or (cmp is TMainMenu)) then
+          Continue;
+
+        // Determina nome amigável padrão
+        sNomeAmigavel := cmp.ClassName;
+        if IsPublishedProp(cmp, 'Caption') then
+          sNomeAmigavel := GetPropValue(cmp, 'Caption')
+        else if IsPublishedProp(cmp, 'Text') then
+          sNomeAmigavel := GetPropValue(cmp, 'Text');
+
+        sNomeAmigavel := StringReplace(sNomeAmigavel, '&', '', [rfReplaceAll]);
+        sNomeAmigavel := Trim(sNomeAmigavel);
+
+        // Mapeamento amigável refinado
+        if SameText(sNomeTecnico, 'mnuprincipal') then
+        begin
+          sNomeAmigavel := 'Menu Principal';
+          sCategoria := 'Menu Principal';
+        end
+        else if SameText(sNomeTecnico, 'pnlmenuprincipal') then
+        begin
+          sNomeAmigavel := 'Barra de Ferramentas Principal';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbtrocaempresa') then
+        begin
+          sNomeAmigavel := 'Barra: Trocar Empresa';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbcadastroentidades') then
+        begin
+          sNomeAmigavel := 'Barra: Cadastro de Entidades';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbconciliacaovindi') then
+        begin
+          sNomeAmigavel := 'Barra: Conciliação Vindi';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbocorrenciasapolo') then
+        begin
+          sNomeAmigavel := 'Barra: Ocorrências Apolo';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbconsulta') then
+        begin
+          sNomeAmigavel := 'Barra: Consulta Rápida';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else if SameText(sNomeTecnico, 'spbsair') then
+        begin
+          sNomeAmigavel := 'Barra: Sair do Sistema';
+          sCategoria := 'Barra de Ferramentas';
+        end
+        else
+        begin
+          if sNomeAmigavel = '' then
+            sNomeAmigavel := sNomeTecnico;
+
+          if cmp is TMenuItem then
+            sCategoria := 'Menu'
+          else if (cmp is TSpeedButton) or (cmp is TToolButton) then
+            sCategoria := 'Barra de Ferramentas'
+          else
+            sCategoria := 'Geral';
+        end;
+
+        // Verifica se o objeto já existe em USER_geoapolo_objetos
+        sql := 'SELECT codigo_objeto FROM USER_geoapolo_objetos WHERE nome_objeto = :psnometecnico';
+        fdquerysql2.Close;
+        fdquerysql2.SQL.Clear;
+        fdquerysql2.SQL.Text := sql;
+        fdquerysql2.ParamByName('psnometecnico').AsString := sNomeTecnico;
+        if not executaracao(fdquerysql2, fdbanco, false, dtsfdquerysql2) then
+        begin
+          // Novo objeto — gera código e insere
+          sCodObjeto := geoapolo_configcod(sEmp, 'USER_geoapolo_objetos', 'Sim');
+          if Trim(sCodObjeto) = '' then
           begin
-            fdquerysql.First;
-            while not fdquerysql.Eof do
-            begin
-              sql:='INSERT INTO USER_geoapolo_grupobjetos (codigo_objeto, codigo_grupo, statusacesso)';
-              sql:=sql+'VALUES (:pcodigobjeto, :pcodigogrupo, :pstatusacess)' ;
-              fdquerysql3.Close;
-              fdquerysql3.SQL.Clear;
-              fdquerysql3.SQL.Text := sql;
-              fdquerysql3.parambyname('pcodigobjeto').AsString := sCodObjeto;
-              fdquerysql3.ParamByName('pcodigogrupo').AsString := fdquerysql.FieldByName('codigo_grupo').AsString;
-              fdquerysql3.ParamByName('pstatusacess').AsString := 'N';
-              if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-                 begin
-                 end;
-              fdquerysql.Next;
-            end;
+            fdquerysql3.Close;
+            fdquerysql3.SQL.Text := 'SELECT COALESCE(MAX(CAST(codigo_objeto AS INT)), 0) + 1 AS prox FROM USER_geoapolo_objetos';
+            fdquerysql3.Open;
+            sCodObjeto := fdquerysql3.FieldByName('prox').AsString;
           end;
+
+          sql := 'INSERT INTO USER_geoapolo_objetos (codigo_objeto, nome_objeto, nome_amigavel, categoria) ' +
+                 'VALUES (:pcodigobj, :pnomeobjeto, :pnomeamigavel, :pcategoria)';
+          fdquerysql3.Close;
+          fdquerysql3.SQL.Clear;
+          fdquerysql3.SQL.Text := sql;
+          fdquerysql3.ParamByName('pcodigobj').AsString     := sCodObjeto;
+          fdquerysql3.ParamByName('pnomeobjeto').AsString    := sNomeTecnico;
+          fdquerysql3.ParamByName('pnomeamigavel').AsString  := sNomeAmigavel;
+          fdquerysql3.ParamByName('pcategoria').AsString     := sCategoria;
+          executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
         end;
       end;
     end;
+
+    // 2) Garante que TODOS os objetos de USER_geoapolo_objetos tenham registro
+    // em USER_geoapolo_grupobjetos para TODOS os grupos existentes, com statusacesso = 'N' por padrão.
+    sql :=
+      'INSERT INTO USER_geoapolo_grupobjetos (codigo_objeto, codigo_grupo, statusacesso) ' +
+      'SELECT o.codigo_objeto, g.codigo_grupo, ''N'' ' +
+      'FROM USER_geoapolo_objetos o ' +
+      'CROSS JOIN USER_geoapolo_grupo g ' +
+      'WHERE NOT EXISTS ( ' +
+      '    SELECT 1 FROM USER_geoapolo_grupobjetos go WITH(NOLOCK) ' +
+      '    WHERE go.codigo_objeto = o.codigo_objeto AND go.codigo_grupo = g.codigo_grupo ' +
+      ')';
+    fdquerysql3.Close;
+    fdquerysql3.SQL.Clear;
+    fdquerysql3.SQL.Text := sql;
+    executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3);
   end;
 end;
 
@@ -275,25 +350,12 @@ begin
         end;
       if not achado then
       begin
-        { Objeto removido do projeto — apaga vínculos e depois o objeto }
-        fdquerysql3.Close;
-        fdquerysql3.SQL.Clear;
-        sql:= 'DELETE FROM USER_geoapolo_grupobjetos WHERE codigo_objeto = :pcodigobjeto';
-        fdquerysql3.SQL.Text := sql;
-        fdquerysql3.ParamByName('pcodigobjeto').AsString := sCod;
-        if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-           begin
-           end;
-         sql:= 'DELETE FROM USER_geoapolo_objetos WHERE codigo_objeto = :pcodigobjeto';
-         fdquerysql3.Close;
-         fdquerysql3.SQL.Clear;
-         fdquerysql3.SQL.Text := sql;
-         fdquerysql3.ParamByName('pcodigobjeto').AsString :=sCod;
-         if executaracao(fdquerysql3, fdbanco, true, dtsfdquerysql3) then
-            begin
-            end;
-         fdquerysql.Next;
-         end
+        { Em arquitetura híbrida (Delphi + Python / GeoAlvo), USER_geoapolo_objetos contém
+          menus, botões e telas que não residem em frmprincipal.Components.
+          Não exclui objetos para preservar a integridade do catálogo do sistema. }
+        fdquerysql.Next;
+        Continue;
+      end
       else
         fdquerysql.Next;
     end;
@@ -403,14 +465,12 @@ begin
       { Texto exibido: "[Categoria]  Nome Amigável" }
       var sExibicao := '[' + fdquerysql.FieldByName('categoria').AsString + ']  ' +
                        fdquerysql.FieldByName('nome_amigavel').AsString;
-      { Objeto associado ao item = nome técnico (usado nas queries) }
-      var oTecnico := TObject(Integer(
-                       PChar(fdquerysql.FieldByName('nome_objeto').AsString)));
-      // NOTA: uso de StringList paralela abaixo é mais robusto; veja FNomesTecnicos
+      { Objeto associado ao item = codigo_objeto para acesso O(1) direto }
+      var iCodObj := fdquerysql.FieldByName('codigo_objeto').AsInteger;
       if fdquerysql.FieldByName('statusacesso').AsString = 'A' then
-        lstLiberados.Items.Add(sExibicao)
+        lstLiberados.Items.AddObject(sExibicao, TObject(iCodObj))
       else
-        lstDisponiveis.Items.Add(sExibicao);
+        lstDisponiveis.Items.AddObject(sExibicao, TObject(iCodObj));
       fdquerysql.Next;
     end;
   end;
@@ -547,15 +607,19 @@ begin
   ValidarGrupoSelecionado;
   if ALstOrigem.ItemIndex < 0 then Exit;
   sTexto       := ALstOrigem.Items[ALstOrigem.ItemIndex];
-  sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, ALstOrigem.ItemIndex);
-  iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+  iCodigo      := Integer(ALstOrigem.Items.Objects[ALstOrigem.ItemIndex]);
+  if iCodigo = 0 then
+  begin
+    sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, ALstOrigem.ItemIndex);
+    iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+  end;
   if iCodigo = 0 then
   begin
     MessageDlg('Objeto não encontrado na base de dados.', mtError, [mbOK], 0);
     Exit;
   end;
   AlterarPermissao(sNomeTecnico, iCodigo, FCodigoGrupo, 'A');
-  ALstDestino.Items.Add(sTexto);
+  ALstDestino.Items.AddObject(sTexto, TObject(iCodigo));
   ALstOrigem.Items.Delete(ALstOrigem.ItemIndex);
 end;
 
@@ -571,8 +635,12 @@ begin
   ValidarGrupoSelecionado;
   if ALstOrigem.ItemIndex < 0 then Exit;
   sTexto       := ALstOrigem.Items[ALstOrigem.ItemIndex];
-  sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, ALstOrigem.ItemIndex);
-  iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+  iCodigo      := Integer(ALstOrigem.Items.Objects[ALstOrigem.ItemIndex]);
+  if iCodigo = 0 then
+  begin
+    sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, ALstOrigem.ItemIndex);
+    iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+  end;
   if iCodigo = 0 then
   begin
     MessageDlg('Objeto não encontrado na base de dados.', mtError, [mbOK], 0);
@@ -582,7 +650,7 @@ begin
        'Confirma a retirada da permissão de acesso para "' + sTexto + '"?',
        mtConfirmation, [mbYes, mbNo], 0) <> idYes then Exit;
   AlterarPermissao(sNomeTecnico, iCodigo, FCodigoGrupo, 'N');
-  ALstDestino.Items.Add(sTexto);
+  ALstDestino.Items.AddObject(sTexto, TObject(iCodigo));
   ALstOrigem.Items.Delete(ALstOrigem.ItemIndex);
 end;
 
@@ -601,12 +669,16 @@ begin
   for i := ALstOrigem.Items.Count - 1 downto 0 do
   begin
     sTexto       := ALstOrigem.Items[i];
-    sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, i);
-    iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+    iCodigo      := Integer(ALstOrigem.Items.Objects[i]);
+    if iCodigo = 0 then
+    begin
+      sNomeTecnico := NomeTecnicoDoItem(ALstOrigem, i);
+      iCodigo      := BuscarCodigoObjeto(sNomeTecnico);
+    end;
     if iCodigo > 0 then
     begin
-      AlterarPermissao(sNomeTecnico, iCodigo, FCodigoGrupo, ANovoStatus);
-      ALstDestino.Items.Add(sTexto);
+      AlterarPermissao('', iCodigo, FCodigoGrupo, ANovoStatus);
+      ALstDestino.Items.AddObject(sTexto, TObject(iCodigo));
       ALstOrigem.Items.Delete(i);
     end;
   end;
@@ -730,6 +802,21 @@ begin
   FGrupoCarregado    := False;
   lstDisponiveis.Clear;
   lstLiberados.Clear;
+end;
+
+procedure Tfrmconfigperfil.spbatualizarClick(Sender: TObject);
+begin
+  Screen.Cursor := crHourGlass;
+  try
+    SincronizarObjetosBanco;
+    CarregarCategorias;
+    if FCodigoGrupo > 0 then
+      CarregarPermissoes(FCodigoGrupo, FCategoriaFiltro);
+    AtualizarStatusBar;
+    MessageDlg('Varredura concluída com sucesso! Lista de objetos atualizada.', mtInformation, [mbOK], 0);
+  finally
+    Screen.Cursor := crDefault;
+  end;
 end;
 
 procedure Tfrmconfigperfil.spbretornarClick(Sender: TObject);

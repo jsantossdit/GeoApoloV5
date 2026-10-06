@@ -18,12 +18,13 @@ class ImportarInscritosEventosView:
         self.parent = parent
         self.service = service or EventosService(EventosRepository())
 
+        from core import centralizar_janela
         self.window = tk.Toplevel(parent)
         self.window.title("GeoAlvo - Importação de Cadastros de Eventos")
-        self.window.geometry("1040x680")
         self.window.minsize(900, 580)
         self.window.transient(parent)
         self.window.grab_set()
+        centralizar_janela(self.window, parent, 1040, 680)
 
         self._inscricoes: List[InscricaoEventoDTO] = []
         self._setup_ui()

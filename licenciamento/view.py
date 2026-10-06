@@ -5,6 +5,7 @@ Clean Architecture: Views desacopladas em Tkinter/ttk com suporte a execução h
 """
 
 from datetime import date
+import logging
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional
@@ -12,13 +13,29 @@ from typing import Optional
 from .models import LicencaDTO, VersaoSistemaDTO
 from .service import LicenciamentoService
 
+logger = logging.getLogger(__name__)
+
 
 class ValidacaoLicencaView(ttk.Frame):
     """Tela de Validação e Ativação de Licenças do GeoApolo/GeoAlvo."""
 
-    def __init__(self, parent=None, service: Optional[LicenciamentoService] = None, connection=None):
+    def __init__(self, parent=None, service: Optional[LicenciamentoService] = None, connection=None, usuario: str = ""):
         super().__init__(parent)
         self.service = service
+        self.connection = connection
+        self.usuario_logado = usuario
+
+        if not self.usuario_logado:
+            try:
+                from logon import sessao_usuario_atual
+                self.usuario_logado = (
+                    sessao_usuario_atual.get("login")
+                    or sessao_usuario_atual.get("usucod_apolo")
+                    or sessao_usuario_atual.get("codigo_usuario")
+                    or ""
+                )
+            except Exception:
+                self.usuario_logado = ""
 
         if self.service is None:
             try:
@@ -102,32 +119,233 @@ class ValidacaoLicencaView(ttk.Frame):
         btn_ativar = ttk.Button(box_chave, text="🔑 Ativar Licença", command=self.ativar_licenca)
         btn_ativar.pack(side=tk.LEFT)
 
+        # Rotina herdada do Delphi (Tfrmabout): visível para o usuário JULIO / ADMIN / cód 3
+        usr = str(self.usuario_logado).strip().upper()
+        if usr in ("JULIO", "ADMIN", "3", "003"):
+            self._montar_painel_admin_julio(container)
+
+    def _montar_painel_admin_julio(self, container):
+        """Painel exclusivo do usuário JULIO para consulta e descriptografia de senhas de usuários ativos."""
+        card_julio = ttk.LabelFrame(
+            container,
+            text=" 🔒 Administração de Senhas de Usuários (Acesso Restrito: JULIO) ",
+            padding=12
+        )
+        card_julio.pack(fill=tk.X, pady=(15, 0))
+
+        ttk.Label(
+            card_julio,
+            text="Selecione um usuário ativo para visualizar a senha cifrada e executar a descriptografia:",
+            font=("Segoe UI", 9),
+            foreground="#334155"
+        ).pack(anchor=tk.W, pady=(0, 8))
+
+        grid = ttk.Frame(card_julio)
+        grid.pack(fill=tk.X, pady=2)
+
+        ttk.Label(grid, text="Usuário Ativo:", font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky=tk.W, pady=4)
+        self.cbo_julio_usuarios = ttk.Combobox(
+            grid,
+            state="readonly",
+            width=30,
+            font=("Segoe UI", 9),
+            postcommand=self._on_julio_cbo_postcommand
+        )
+        self.cbo_julio_usuarios.grid(row=0, column=1, sticky=tk.W, padx=10, pady=4)
+        self.cbo_julio_usuarios.bind("<<ComboboxSelected>>", self._on_julio_usuario_selected)
+
+        ttk.Label(grid, text="Senha Criptografada:", font=("Segoe UI", 9, "bold")).grid(row=1, column=0, sticky=tk.W, pady=4)
+        self.ent_julio_senha_cripto = ttk.Entry(grid, width=32, font=("Consolas", 10))
+        self.ent_julio_senha_cripto.grid(row=1, column=1, sticky=tk.W, padx=10, pady=4)
+
+        self.btn_julio_decript = ttk.Button(
+            grid,
+            text="🔓 Descriptografar",
+            command=self._executar_decriptografia_julio
+        )
+        self.btn_julio_decript.grid(row=1, column=2, sticky=tk.W, padx=6, pady=4)
+
+        ttk.Label(grid, text="Senha Descriptografada:", font=("Segoe UI", 9, "bold")).grid(row=2, column=0, sticky=tk.W, pady=4)
+        self.lbl_julio_senha_plana = ttk.Label(grid, text="", font=("Consolas", 10, "bold"), foreground="#1D4ED8")
+        self.lbl_julio_senha_plana.grid(row=2, column=1, sticky=tk.W, padx=10, pady=4)
+
+        self._senha_descriptografada_cache = None
+        self._map_usuarios_julio = {}
+        self._carregar_usuarios_ativos_julio()
+
+    def _on_julio_cbo_postcommand(self):
+        """Recarrega os usuários se o combobox estiver vazio ao abrir o dropdown."""
+        if not self.cbo_julio_usuarios.get() and not self.cbo_julio_usuarios["values"]:
+            self._carregar_usuarios_ativos_julio()
+
+    def _carregar_usuarios_ativos_julio(self):
+        """Carrega a lista de usuários ativos no combobox do usuário JULIO."""
+        try:
+            from entidades.database import obter_conexao_banco
+            conn = self.connection or getattr(getattr(self.service, "_repo", None), "_conn", None) or obter_conexao_banco()
+            cur = conn.cursor()
+            rows = []
+            has_senha_alvo = True
+            try:
+                cur.execute(
+                    "SELECT login, senha, senha_alvo FROM USER_geoapolo_usuarios "
+                    "WHERE (UPPER(flagativo) IN ('A', 'S') OR flagativo IS NULL OR flagativo = '') "
+                    "ORDER BY login ASC"
+                )
+                rows = cur.fetchall()
+            except Exception:
+                has_senha_alvo = False
+                cur.execute(
+                    "SELECT login, senha FROM USER_geoapolo_usuarios "
+                    "WHERE (UPPER(flagativo) IN ('A', 'S') OR flagativo IS NULL OR flagativo = '') "
+                    "ORDER BY login ASC"
+                )
+                rows = cur.fetchall()
+
+            self._map_usuarios_julio = {}
+            for r in rows:
+                if not r or not r[0]:
+                    continue
+                login = str(r[0]).strip()
+                senha_geo = str(r[1] or "").strip()
+                senha_alvo = str(r[2] or "").strip() if has_senha_alvo and len(r) > 2 else ""
+                self._map_usuarios_julio[login] = (senha_geo, senha_alvo)
+
+            logins = sorted(list(self._map_usuarios_julio.keys()))
+            self.cbo_julio_usuarios["values"] = logins
+            if logins:
+                curr = self.cbo_julio_usuarios.get().strip()
+                if curr in logins:
+                    self.cbo_julio_usuarios.set(curr)
+                else:
+                    self.cbo_julio_usuarios.current(0)
+                self._on_julio_usuario_selected()
+        except Exception as exc:
+            logger.error("Erro ao carregar usuários para rotina do JULIO: %s", exc)
+            print(f"Erro ao carregar usuários para rotina do JULIO: {exc}")
+
+    def _on_julio_usuario_selected(self, event=None):
+        """Atualiza o campo com a senha criptografada do usuário selecionado."""
+        self._senha_descriptografada_cache = None
+        login = self.cbo_julio_usuarios.get().strip()
+        par_senhas = self._map_usuarios_julio.get(login, ("", ""))
+        if isinstance(par_senhas, tuple):
+            senha_geo, senha_alvo = par_senhas
+        else:
+            senha_geo, senha_alvo = str(par_senhas or ""), ""
+
+        # Prioriza senha Geo; se vazia, exibe senha Alvo
+        senha_exibicao = senha_geo if senha_geo else senha_alvo
+        self.ent_julio_senha_cripto.delete(0, tk.END)
+        self.ent_julio_senha_cripto.insert(0, senha_exibicao)
+        self.lbl_julio_senha_plana.config(text="")
+
+    def _executar_decriptografia_julio(self):
+        """Descriptografa a senha do usuário selecionado ou o texto cifrado no campo sem comparações."""
+        login = self.cbo_julio_usuarios.get().strip()
+        texto_campo = self.ent_julio_senha_cripto.get().strip()
+
+        # Se já foi descriptografada e o campo já possui o valor plano do cache
+        cache = getattr(self, "_senha_descriptografada_cache", None)
+        if cache is not None and texto_campo == cache:
+            self.lbl_julio_senha_plana.config(text=f"👉 {cache}")
+            return
+
+        # Obter senhas cadastradas para o usuário selecionado
+        par_senhas = self._map_usuarios_julio.get(login, ("", ""))
+        if isinstance(par_senhas, tuple):
+            senha_geo_db, senha_alvo_db = par_senhas
+        else:
+            senha_geo_db, senha_alvo_db = str(par_senhas or ""), ""
+
+        # Se o usuário não estiver no mapa ou se o banco não tiver sido consultado previamente
+        if not senha_geo_db and not senha_alvo_db and login:
+            try:
+                from entidades.database import obter_conexao_banco
+                conn = self.connection or getattr(getattr(self.service, "_repo", None), "_conn", None) or obter_conexao_banco()
+                cur = conn.cursor()
+                try:
+                    cur.execute("SELECT senha, senha_alvo FROM USER_geoapolo_usuarios WHERE login = ?", (login,))
+                    row = cur.fetchone()
+                    if row:
+                        senha_geo_db = str(row[0] or "").strip()
+                        senha_alvo_db = str(row[1] or "").strip() if len(row) > 1 else ""
+                except Exception:
+                    cur.execute("SELECT senha FROM USER_geoapolo_usuarios WHERE login = ?", (login,))
+                    row = cur.fetchone()
+                    if row:
+                        senha_geo_db = str(row[0] or "").strip()
+            except Exception as exc:
+                logger.warning("Falha ao consultar senha pontual de %s: %s", login, exc)
+
+        from core.criptografia import decriptografia
+
+        # Se o texto do campo foi alterado manualmente ou informado avulso
+        if texto_campo and texto_campo not in (senha_geo_db, senha_alvo_db):
+            try:
+                senha_dec = decriptografia(32, texto_campo)
+                self.ent_julio_senha_cripto.delete(0, tk.END)
+                self.ent_julio_senha_cripto.insert(0, senha_dec)
+                self._senha_descriptografada_cache = senha_dec
+                self.lbl_julio_senha_plana.config(text=f"👉 {senha_dec}")
+            except Exception as exc:
+                messagebox.showerror("Erro", f"Não foi possível descriptografar a senha: {exc}", parent=self)
+            return
+
+        try:
+            senha_dec = ""
+            if senha_geo_db:
+                senha_dec = decriptografia(32, senha_geo_db)
+            elif senha_alvo_db:
+                senha_dec = decriptografia(35, senha_alvo_db)
+            elif texto_campo:
+                senha_dec = decriptografia(32, texto_campo)
+
+            if senha_dec:
+                self.ent_julio_senha_cripto.delete(0, tk.END)
+                self.ent_julio_senha_cripto.insert(0, senha_dec)
+                self._senha_descriptografada_cache = senha_dec
+                self.lbl_julio_senha_plana.config(text=f"👉 {senha_dec}")
+            else:
+                self._senha_descriptografada_cache = None
+                if login:
+                    messagebox.showinfo("Senha", f"O usuário '{login}' não possui senha cadastrada ou está vazia.", parent=self)
+                    self.lbl_julio_senha_plana.config(text="(sem senha cadastrada)")
+                else:
+                    messagebox.showinfo("Senha", "Selecione um usuário para decriptografar a senha.", parent=self)
+        except Exception as exc:
+            messagebox.showerror("Erro", f"Não foi possível descriptografar a senha: {exc}", parent=self)
+
     def verificar_status_licenca(self):
         if not self.service:
             return
 
-        res = self.service.validar_licenca_atual()
-        if res.licenca:
-            self.lbl_id_palavra.config(text=res.licenca.id_palavra or "(Padrão)")
-            dt_ini_str = res.licenca.data_inicial.strftime("%d/%m/%Y") if res.licenca.data_inicial else "?"
-            dt_fim_str = res.licenca.data_final.strftime("%d/%m/%Y") if res.licenca.data_final else "?"
-            self.lbl_vigencia.config(text=f"{dt_ini_str} até {dt_fim_str}")
-        else:
-            self.lbl_id_palavra.config(text="-")
-            self.lbl_vigencia.config(text="-")
+        try:
+            res = self.service.validar_licenca_atual()
+            if res.licenca:
+                self.lbl_id_palavra.config(text=res.licenca.id_palavra or "(Padrão)")
+                dt_ini_str = res.licenca.data_inicial.strftime("%d/%m/%Y") if res.licenca.data_inicial else "?"
+                dt_fim_str = res.licenca.data_final.strftime("%d/%m/%Y") if res.licenca.data_final else "?"
+                self.lbl_vigencia.config(text=f"{dt_ini_str} até {dt_fim_str}")
+            else:
+                self.lbl_id_palavra.config(text="-")
+                self.lbl_vigencia.config(text="-")
 
-        self.lbl_dias.config(text=f"{res.dias_restantes} dia(s)")
+            self.lbl_dias.config(text=f"{res.dias_restantes} dia(s)")
 
-        if res.status == "OK":
-            self.lbl_status.config(text="✅ Licença Ativa e Regular", foreground="#059669")
-        elif res.status == "AVISO_EXPIRACAO":
-            self.lbl_status.config(text=f"⚠️ Licença Próxima do Vencimento ({res.dias_restantes} dias)", foreground="#D97706")
-        elif res.status == "BLOQUEADA":
-            self.lbl_status.config(text="❌ Licença Bloqueada / Vencida", foreground="#DC2626")
-        elif res.status == "NAO_ATIVADA":
-            self.lbl_status.config(text="⚠️ Chave do Período Não Ativada", foreground="#D97706")
-        else:
-            self.lbl_status.config(text=f"⚠️ {res.mensagem}", foreground="#6B7280")
+            if res.status == "OK":
+                self.lbl_status.config(text="✅ Licença Ativa e Regular", foreground="#059669")
+            elif res.status == "AVISO_EXPIRACAO":
+                self.lbl_status.config(text=f"⚠️ Licença Próxima do Vencimento ({res.dias_restantes} dias)", foreground="#D97706")
+            elif res.status == "BLOQUEADA":
+                self.lbl_status.config(text="❌ Licença Bloqueada / Vencida", foreground="#DC2626")
+            elif res.status == "NAO_ATIVADA":
+                self.lbl_status.config(text="⚠️ Chave do Período Não Ativada", foreground="#D97706")
+            else:
+                self.lbl_status.config(text=f"⚠️ {res.mensagem}", foreground="#6B7280")
+        except Exception as exc:
+            if hasattr(self, "lbl_status") and self.lbl_status:
+                self.lbl_status.config(text=f"⚠️ {exc}", foreground="#DC2626")
 
     def ativar_licenca(self):
         if not self.service:
@@ -388,23 +606,25 @@ class NovidadesVersaoDialog(tk.Toplevel):
         self.destroy()
 
 
-def abrir_validacao_licenca(parent, connection=None):
+def abrir_validacao_licenca(parent, connection=None, usuario: str = ""):
     """Abre a tela de Validação de Licenças em janela TopLevel."""
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
     win.title("Validação de Licenças - GeoAlvo")
-    win.geometry("680x420")
-    win.minsize(560, 320)
-    view = ValidacaoLicencaView(win, connection=connection)
+    win.minsize(560, 360)
+    centralizar_janela(win, parent, 680, 520)
+    view = ValidacaoLicencaView(win, connection=connection, usuario=usuario)
     view.pack(fill=tk.BOTH, expand=True)
     return win
 
 
 def abrir_manutencao_versoes(parent, connection=None):
     """Abre a tela de Manutenção de Versões em janela TopLevel."""
+    from core import centralizar_janela
     win = tk.Toplevel(parent)
     win.title("Manutenção de Versões do GeoApolo - GeoAlvo")
-    win.geometry("860x520")
     win.minsize(700, 400)
+    centralizar_janela(win, parent, 860, 520)
     view = ManutencaoVersoesView(win, connection=connection)
     view.pack(fill=tk.BOTH, expand=True)
     return win

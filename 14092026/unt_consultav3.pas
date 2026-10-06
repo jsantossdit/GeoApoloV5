@@ -1,4 +1,4 @@
-﻿unit unt_consultav3;
+unit unt_consultav3;
 
 interface
 
@@ -1510,14 +1510,13 @@ begin
                      end;
                end;
             end
-         else if controle = 'CATEGORIA_IMPORTA_GRUPOORACAO' then
+         else if (controle = 'CATEGORIA_IMPORTA_GRUPOORACAO') or (controle = 'CATEGORIA_COORDENADOR_GRUPO') then
             begin
                with modulo_dados, frmconsulta3 do
                begin
-                  sql := 'SELECT cat.categcodestr, cat.categnome';
-                  sql := sql + ' FROM categoria cat with(nolock)';
-                  sql := sql + ' WHERE substring(cat.CategCodEstr,1,6) in (' + QuotedStr('02.001') + ', ' + QuotedStr('02.002') + ', ' + QuotedStr('03.001') + ', ' + QuotedStr('03.002') + ', ' + QuotedStr('03.003') + ', ' + QuotedStr('03.004') + ', ' + QuotedStr('03.005') + ', ' + QuotedStr('03.006') + ')';
-                  sql := sql + ' AND ' + cbocampo.Text + ' LIKE :procurarpor';
+                  sql := 'SELECT cat.geocategcodestr, cat.geocategnome';
+                  sql := sql + ' FROM USER_geoapolo_categoria cat with(nolock)';
+                  sql := sql + ' WHERE ' + cbocampo.Text + ' LIKE :procurarpor';
                   sql := sql + ' ORDER BY ' + cbordem.Text + ' ASC';
 
                   fdquerysql5.Close;
@@ -2560,7 +2559,7 @@ begin
          configura_grid('CATEGORIA_ENTIDADE_ALVO',frmconsulta3,'gridconsulta',frmlogon.nomeusuario,gridconsulta,modulo_dados.dtsfdquerysql11);
          gridconsulta.DataSource:=modulo_dados.dtsfdquerysql6; gridconsulta.Refresh;
       end
-   else if controle = 'CATEGORIA_IMPORTA_GRUPOORACAO' then
+   else if (controle = 'CATEGORIA_IMPORTA_GRUPOORACAO') or (controle = 'CATEGORIA_COORDENADOR_GRUPO') then
       begin
          carrega_config('CATEGORIA_IMPORTA_GRUPOORACAO',frmconsulta3,cbocampo,cbordem,rdgcrescente,rdgdecrescente);
          configura_grid('CATEGORIA_IMPORTA_GRUPOORACAO',frmconsulta3,'gridconsulta',frmlogon.nomeusuario,gridconsulta,modulo_dados.dtsfdquerysql6);
@@ -3037,7 +3036,7 @@ begin
          //grava_configuracoes_grids(frmconsulta3,'DIOCESES_CNBB_ENTIDADE',gridconsulta,'gridconsulta',frmlogon.nomeusuario);
          grava_config_telabusca('DIOCESES_CNBB_ENTIDADE',cbocampo.Text,cbordem.Text,'A',frmconsulta3);
       end
-   else if controle = 'CATEGORIA_IMPORTA_GRUPOORACAO' then
+   else if (controle = 'CATEGORIA_IMPORTA_GRUPOORACAO') or (controle = 'CATEGORIA_COORDENADOR_GRUPO') then
       begin
   //       grava_configuracoes_grids(frmconsulta3,'CATEGORIA_IMPORTA_GRUPOORACAO',gridconsulta,'gridconsulta',frmlogon.nomeusuario);
          grava_config_telabusca('CATEGORIA_IMPORTA_GRUPOORACAO',cbocampo.Text,cbordem.Text,'A',frmconsulta3);
@@ -3756,15 +3755,10 @@ begin
               Self.ModalResult:=mrok;
            end;
         end
-     else if controle = 'CATEGORIA_IMPORTA_GRUPOORACAO' then
+     else if (controle = 'CATEGORIA_IMPORTA_GRUPOORACAO') or (controle = 'CATEGORIA_COORDENADOR_GRUPO') then
         begin
-{           with frmmoderacaogrupodeoracao do
-           begin
-              lblcategcodestr.text := querysql5.FieldByName('categcodestr').AsString;
-              lblcategnome.caption := querysql5.FieldByName('categnome').AsString;
-              lblcategcodestr.refresh; lblcategnome.refresh;
-              lblprocurarpor.Clear; frmconsulta3.Close;
-           end;}
+           lblprocurarpor.Clear;
+           Self.ModalResult := mrOk;
         end
      else if controle = 'IMOBILIZADOCENTROCONTROLE' then
         begin
